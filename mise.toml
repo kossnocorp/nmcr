@@ -1,0 +1,15 @@
+[tools]
+# Stack
+rust = "latest"
+node = { version = "lts", postinstall = "corepack enable" }
+
+# Tools
+cargo-binstall = "latest"        # Install Rust-based binaries instead of compiling
+"cargo:watchexec-cli" = "latest" # File watcher
+
+[settings]
+experimental = true # Enable extra features
+cargo.binstall = true # Enable cargo binstall
+idiomatic_version_file_enable_tools = [
+  "rust",
+] # Consume Rust toolchain settings from rust-toolchain.toml
