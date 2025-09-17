@@ -22,3 +22,4 @@ tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
 console = "0.16.0"
 indicatif = { version = "0.18.0", features = ["tokio"] }
 nmcr_project = { version = "0.1.0", path = "../project" }
+nmcr_parser = { version = "0.1.0", path = "../parser" }

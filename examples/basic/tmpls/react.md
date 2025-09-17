@@ -2,6 +2,8 @@
 
 ## React component
 
+React component file template with optional props.
+
 ### Args
 
 - `props`: Whether to include props interface.
