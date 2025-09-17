@@ -2,18 +2,13 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TemplateArgType {
+    #[default]
     Any,
     Boolean,
     String,
     Number,
-}
-
-impl Default for TemplateArgType {
-    fn default() -> Self {
-        TemplateArgType::Any
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]

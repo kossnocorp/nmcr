@@ -20,9 +20,6 @@ impl Cli {
     }
 
     pub fn resolve_project_path(&self) -> PathBuf {
-        self.project
-            .as_ref()
-            .map(|p| p.clone())
-            .unwrap_or_else(|| Config::default_path())
+        self.project.clone().unwrap_or_else(Config::default_path)
     }
 }
