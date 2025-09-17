@@ -11,3 +11,7 @@ repository = "https://github.com/kossnocorp/nmcr"
 anyhow = "1.0.99"
 markdown = "1.0.0"
 nmcr_types = { version = "0.1.0", path = "../types" }
+
+[dev-dependencies]
+insta = { version = "1.39.0", features = ["glob"] }
+indoc = "2"
