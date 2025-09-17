@@ -40,6 +40,7 @@ fn single_details() {
         Generates a personalized greeting.
 
         ## Args
+
         - `name`: Name to greet.
 
         ## Template
