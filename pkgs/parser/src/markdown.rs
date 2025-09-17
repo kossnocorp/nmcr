@@ -1,4 +1,3 @@
-use crate::ParsedMarkdown;
 use crate::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -92,12 +91,14 @@ fn parse_str_with_path(
             let mut codes = collect_code_blocks(&sec.nodes);
             if codes.len() == 1 {
                 let (lang, content) = codes.remove(0);
-                let mut tmpl = Template::default();
-                tmpl.name = sec.title.clone();
-                tmpl.description = collect_description(sec);
-                tmpl.lang = lang;
-                tmpl.content = content;
-                tmpl.location = section_location(sec, path);
+                let tmpl = Template {
+                    name: sec.title.clone(),
+                    description: collect_description(sec),
+                    lang,
+                    content,
+                    location: section_location(sec, path),
+                    ..Default::default()
+                };
                 standalones.push(tmpl);
             }
         }
@@ -122,7 +123,7 @@ fn make_sections(nodes: &[mdast::Node]) -> Vec<Section> {
         if let mdast::Node::Heading(h) = node {
             let title = inline_text(&h.children);
             let span = node.position().map(position_to_span);
-            heads.push((i, h.depth as u8, title, span));
+            heads.push((i, h.depth, title, span));
         }
     }
     let mut sections = Vec::new();
