@@ -1,5 +1,7 @@
 # React
 
+React templates collection.
+
 ## React component
 
 React component file template with optional props.
