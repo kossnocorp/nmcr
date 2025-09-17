@@ -51,10 +51,10 @@ fn parse_str_with_path(
         // Parent sections at base level that contain at lemdast one allowed subheading
         let mut templates = Vec::new();
         for parent in sections.iter().filter(|s| s.level == base_level) {
-            if section_contains_allowed(parent) {
-                if let Some(t) = parse_template_from_section(parent, path)? {
-                    templates.push(t);
-                }
+            if section_contains_allowed(parent)
+                && let Some(t) = parse_template_from_section(parent, path)?
+            {
+                templates.push(t);
             }
         }
 
@@ -63,7 +63,7 @@ fn parse_str_with_path(
             1 => return Ok(ParsedMarkdown::Template(templates.remove(0))),
             _ => {
                 // Collection: choose collection meta from nearest header above base_level (usually H1)
-                let collection_meta = sections.iter().filter(|s| s.level < base_level).next();
+                let collection_meta = sections.iter().find(|s| s.level < base_level);
                 let (name, description) = if let Some(meta) = collection_meta {
                     (meta.title.clone(), collect_description(meta))
                 } else {
@@ -160,9 +160,11 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
     let subsections = make_sections(&section.nodes);
 
     // Name/description from section itself
-    let mut tmpl = Template::default();
-    tmpl.name = section.title.clone();
-    tmpl.description = collect_description(section);
+    let mut tmpl = Template {
+        name: section.title.clone(),
+        description: collect_description(section),
+        ..Default::default()
+    };
 
     // Args
     if let Some(args_sec) = subsections
@@ -176,11 +178,10 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
     if let Some(tpl_sec) = subsections
         .iter()
         .find(|s| matches_subhead(&s.title, &["template"]))
+        && let Some((lang, content)) = collect_code_blocks(&tpl_sec.nodes).into_iter().next()
     {
-        if let Some((lang, content)) = collect_code_blocks(&tpl_sec.nodes).into_iter().next() {
-            tmpl.lang = lang;
-            tmpl.content = content;
-        }
+        tmpl.lang = lang;
+        tmpl.content = content;
     }
 
     // Fallback: single code block anywhere in the section
@@ -248,10 +249,10 @@ fn parse_args(section: &Section) -> TemplateArgs {
         match node {
             mdast::Node::List(list) => {
                 for item in &list.children {
-                    if let mdast::Node::ListItem(li) = item {
-                        if let Some((name, desc)) = parse_arg_item(li) {
-                            args.push(name, desc);
-                        }
+                    if let mdast::Node::ListItem(li) = item
+                        && let Some((name, desc)) = parse_arg_item(li)
+                    {
+                        args.push(name, desc);
                     }
                 }
             }
@@ -300,7 +301,7 @@ fn parse_arg_item(item: &mdast::ListItem) -> Option<(String, String)> {
                         }
                     }
                     other => {
-                        let s = inline_text(&[other.clone()]);
+                        let s = inline_text(std::slice::from_ref(other));
                         if !s.is_empty() {
                             if !desc.is_empty()
                                 && !desc.ends_with(' ')

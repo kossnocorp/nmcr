@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub static UI_THEME: LazyLock<ColorfulTheme> = LazyLock::new(|| ColorfulTheme::default());
+pub static UI_THEME: LazyLock<ColorfulTheme> = LazyLock::new(ColorfulTheme::default);
 
 pub static UI_INFO_PREFIX: LazyLock<StyledObject<&str>> = LazyLock::new(|| style("i").blue());
 
@@ -10,7 +10,7 @@ pub struct UiTheme {}
 
 impl UiTheme {
     pub fn for_dialoguer() -> &'static ColorfulTheme {
-        &*UI_THEME
+        &UI_THEME
     }
 
     pub fn format_info(message: &str) -> String {
@@ -45,6 +45,7 @@ impl UiTheme {
         )
     }
 
+    #[allow(dead_code)]
     pub fn start_spinner(message: &str) -> ProgressBar {
         let progress = ProgressBar::new_spinner();
         progress.set_message(message.to_string());
