@@ -6,6 +6,7 @@ node = { version = "lts", postinstall = "corepack enable" }
 # Tools
 cargo-binstall = "latest"        # Install Rust-based binaries instead of compiling
 "cargo:watchexec-cli" = "latest" # File watcher
+"cargo:cargo-insta" = "latest"   # Snapshot testing
 
 [settings]
 experimental = true # Enable extra features
