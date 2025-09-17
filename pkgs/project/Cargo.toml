@@ -10,5 +10,6 @@ repository = "https://github.com/kossnocorp/nmcr"
 [dependencies]
 anyhow = "1.0.99"
 config = "0.15.15"
+wax = { version = "0.6", features = ["walk"] }
 serde = { version = "1.0.219", features = ["derive"] }
 toml = { version = "0.8.19", features = ["parse", "display"] }

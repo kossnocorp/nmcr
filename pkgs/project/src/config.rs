@@ -13,21 +13,6 @@ pub struct Config {
     pub user: ConfigUser,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ConfigUser {
-    /// Glob pattern to find template files
-    #[serde(default = "Config::default_templates_glob")]
-    pub templates: String,
-}
-
-impl Default for ConfigUser {
-    fn default() -> Self {
-        Self {
-            templates: Config::default_templates_glob(),
-        }
-    }
-}
-
 impl Config {
     pub fn new(path: PathBuf, user: ConfigUser) -> Self {
         Self { path, user }
@@ -53,15 +38,15 @@ impl Config {
         Ok(Self::new(path, Default::default()))
     }
 
-    pub fn find(path: &Option<PathBuf>) -> Result<Config> {
+    pub fn find<P: AsRef<Path>>(path: Option<P>) -> Result<Config> {
         match path {
             // If there's a path, locate the config file there
             Some(path) => {
                 // If that's a directory, join the config filename
-                let path = if path.is_dir() {
+                let path = if path.as_ref().is_dir() {
                     Self::join_path(path)
                 } else {
-                    path.clone()
+                    path.as_ref().to_path_buf()
                 };
                 Self::read(path.clone())
             }
@@ -124,5 +109,33 @@ impl Config {
 
     pub fn default_path() -> PathBuf {
         PathBuf::from(CONFIG_FILENAME)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ConfigUser {
+    /// Glob pattern to find template files
+    #[serde(default = "Config::default_templates_glob")]
+    pub templates: String,
+}
+
+impl Default for ConfigUser {
+    fn default() -> Self {
+        Self {
+            templates: Config::default_templates_glob(),
+        }
+    }
+}
+
+impl ConfigUser {
+    pub fn normalized_templates(&self) -> String {
+        let mut pattern = self.templates.trim().to_string();
+        if let Some(stripped) = pattern
+            .strip_prefix("./")
+            .or_else(|| pattern.strip_prefix(".\\"))
+        {
+            pattern = stripped.to_string();
+        }
+        pattern
     }
 }

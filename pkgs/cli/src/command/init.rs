@@ -14,12 +14,11 @@ pub struct InitCmd {}
 
 impl InitCmd {
     pub async fn run<'a>(cli: &'a Cli, args: &'a InitArgs) -> Result<()> {
-        let path = args.path.as_ref().map(|p| p.clone()).unwrap_or_else(|| {
-            cli.config
-                .as_ref()
-                .map(|p| p.clone())
-                .unwrap_or_else(|| Config::default_path())
-        });
+        let path = args
+            .path
+            .as_ref()
+            .map(|p| p.clone())
+            .unwrap_or_else(|| cli.resolve_project_path());
 
         let templates_glob = UiConfig::inquire_templates_glob()?;
 

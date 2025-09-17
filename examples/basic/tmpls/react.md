@@ -1,0 +1,29 @@
+# React
+
+## React component
+
+### Args
+
+- `props`: Whether to include props interface.
+- `name`: Component name.
+
+### Template
+
+```tsx
+import React from "react";
+
+//$if props
+export namespace $Name$ {
+  export interface Props {
+    // $1 -- Props here
+  }
+}
+//$end
+
+export function $Name$(/*$if props*/ props: $Name$.Props /*$end*/) {
+  const {
+    /* $2 -- Destructure props here */
+  } = props;
+  return <div>{/* $3 -- Content here */}</div>;
+}
+```
