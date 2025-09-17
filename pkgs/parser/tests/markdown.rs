@@ -91,6 +91,7 @@ fn collection() {
         ## Friendly Greeting
 
         ### Args
+
         - `name`: Name to greet.
 
         ### Template
