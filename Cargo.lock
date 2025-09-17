@@ -139,6 +139,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "bstr"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "234113d19d0d7d613b40e86fb654acf958910802bcceab913a4f9e7cda03b1a4"
+dependencies = [
+ "memchr",
+ "serde",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -220,6 +230,18 @@ dependencies = [
  "toml 0.9.6",
  "winnow",
  "yaml-rust2",
+]
+
+[[package]]
+name = "console"
+version = "0.15.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "054ccb5b10f9f2cbf51eb355ca1d05c2d279ce1804688d0db74b4733a5aeafd8"
+dependencies = [
+ "encode_unicode",
+ "libc",
+ "once_cell",
+ "windows-sys 0.59.0",
 ]
 
 [[package]]
@@ -315,7 +337,7 @@ version = "0.12.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "25f104b501bf2364e78d0d3974cbc774f738f5865306ed128e1e0d7499c0ad96"
 dependencies = [
- "console",
+ "console 0.16.1",
  "shell-words",
  "tempfile",
  "zeroize",
@@ -440,6 +462,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "07e28edb80900c19c28f1072f2e8aeca7fa06b23cd4169cefe1af5aa3260783f"
 
 [[package]]
+name = "globset"
+version = "0.4.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54a1028dfc5f5df5da8a56a73e6c153c9a9708ec57232470703592a3f18e49f5"
+dependencies = [
+ "aho-corasick",
+ "bstr",
+ "log",
+ "regex-automata",
+ "regex-syntax",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -485,12 +520,31 @@ version = "0.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70a646d946d06bedbbc4cac4c218acf4bbf2d87757a784857025f4d447e4e1cd"
 dependencies = [
- "console",
+ "console 0.16.1",
  "portable-atomic",
  "tokio",
  "unicode-width",
  "unit-prefix",
  "web-time",
+]
+
+[[package]]
+name = "indoc"
+version = "2.0.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f4c7245a08504955605670dbf141fceab975f15ca21570696aebe9d2e71576bd"
+
+[[package]]
+name = "insta"
+version = "1.43.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "46fdb647ebde000f43b5b53f773c30cf9b0cb4300453208713fa38b2c70935a0"
+dependencies = [
+ "console 0.15.11",
+ "globset",
+ "once_cell",
+ "similar",
+ "walkdir",
 ]
 
 [[package]]
@@ -612,7 +666,7 @@ dependencies = [
  "anyhow",
  "clap",
  "config",
- "console",
+ "console 0.16.1",
  "dialoguer",
  "indicatif",
  "nmcr_parser",
@@ -627,6 +681,8 @@ name = "nmcr_parser"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "indoc",
+ "insta",
  "markdown",
  "nmcr_types",
 ]
@@ -959,6 +1015,12 @@ name = "shell-words"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "24188a676b6ae68c3b2cb3a01be17fbf7240ce009799bb56d5b1409051e78fde"
+
+[[package]]
+name = "similar"
+version = "2.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbbb5d9659141646ae647b42fe094daf6c6192d1620870b449d9557f748b2daa"
 
 [[package]]
 name = "slab"

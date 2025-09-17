@@ -1,6 +1,7 @@
 pub mod markdown;
 
 // ParsedMarkdown is a parser-specific enum that references shared types
+#[derive(Debug)]
 pub enum ParsedMarkdown {
     Template(nmcr_types::Template),
     Collection(nmcr_types::TemplateCollection),
