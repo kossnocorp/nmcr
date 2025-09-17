@@ -63,11 +63,7 @@ fn parse_str_with_path(
             1 => return Ok(ParsedMarkdown::Template(templates.remove(0))),
             _ => {
                 // Collection: choose collection meta from nearest header above base_level (usually H1)
-<<<<<<< HEAD
                 let collection_meta = sections.iter().find(|s| s.level < base_level);
-=======
-                let collection_meta = sections.iter().filter(|s| s.level < base_level).next();
->>>>>>> 44830ef (Refactor MCP server tooling layout)
                 let (name, description) = if let Some(meta) = collection_meta {
                     (meta.title.clone(), collect_description(meta))
                 } else {
