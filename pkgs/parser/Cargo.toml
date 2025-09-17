@@ -9,6 +9,5 @@ repository = "https://github.com/kossnocorp/nmcr"
 
 [dependencies]
 anyhow = "1.0.99"
-# Using the `markdown` crate for mdast parsing
 markdown = "1.0.0"
 nmcr_types = { version = "0.1.0", path = "../types" }

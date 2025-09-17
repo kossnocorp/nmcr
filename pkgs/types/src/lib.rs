@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -9,7 +11,9 @@ pub enum TemplateArgType {
 }
 
 impl Default for TemplateArgType {
-    fn default() -> Self { TemplateArgType::Any }
+    fn default() -> Self {
+        TemplateArgType::Any
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -50,6 +54,7 @@ pub struct Template {
     pub args: TemplateArgs,
     pub lang: Option<String>,
     pub content: String,
+    pub location: Location,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -57,4 +62,17 @@ pub struct TemplateCollection {
     pub name: String,
     pub description: String,
     pub templates: Vec<Template>,
+    pub location: Location,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Span {
+    pub start: usize,
+    pub end: usize,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Location {
+    pub path: PathBuf,
+    pub span: Span,
 }
