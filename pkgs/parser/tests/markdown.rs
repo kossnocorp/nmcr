@@ -27,6 +27,13 @@ fn single() {
                 "python",
             ),
             content: "print(\"Hello, world!\")",
+            location: Location {
+                path: "",
+                span: Span {
+                    start: 0,
+                    end: 85,
+                },
+            },
         },
     )
     "#);
@@ -70,6 +77,13 @@ fn single_details() {
                 "handlebars",
             ),
             content: "Hello, {{ name }}!",
+            location: Location {
+                path: "",
+                span: Span {
+                    start: 0,
+                    end: 145,
+                },
+            },
         },
     )
     "#);
@@ -127,6 +141,13 @@ fn collection() {
                 "handlebars",
             ),
             content: "Hey, {{ name }}!",
+            location: Location {
+                path: "",
+                span: Span {
+                    start: 94,
+                    end: 200,
+                },
+            },
         },
     )
     "#);
