@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # mise action currently breaks Rust cache:
+      # https://github.com/jdx/mise-action/issues/215
+      - name: Cache Rust directories
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/bin
+            ~/.cargo/binstall
+            ~/.cargo/env
+            ~/.rustup
+          key: rust-cache-${{ runner.os }}-${{ hashFiles('.mise.toml') }}
+          restore-keys: |
+            rust-cache-${{ runner.os }}-
+
+      - name: mise install
+        uses: jdx/mise-action@v2
+
+      # We also need to install rustfmt and clippy manually until mise action
+      # is fixed.
+      - name: Manually install rustfmt and clippy
+        run: mise exec rust -- rustup component add rustfmt clippy
+
+      - name: Cargo test
+        run: cargo test --all-features
+
+      - name: Cargo fmt
+        if: always()
+        run: cargo fmt --all -- --check
+
+      - name: Cargo clippy
+        if: always()
+        run: cargo clippy --all-features -- -D warnings
