@@ -23,3 +23,4 @@ console = "0.16.0"
 indicatif = { version = "0.18.0", features = ["tokio"] }
 nmcr_project = { version = "0.1.0", path = "../project" }
 nmcr_parser = { version = "0.1.0", path = "../parser" }
+nmcr_mcp = { version = "0.1.0", path = "../mcp" }
