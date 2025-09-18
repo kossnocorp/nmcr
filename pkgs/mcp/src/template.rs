@@ -126,9 +126,11 @@ impl TemplateTool {
     }
 
     fn instructions_line(&self) -> String {
+        use std::fmt::Write as _;
         let mut line = format!("- {} → {}", self.tool_name, self.display_name);
-        if !self.template.description.trim().is_empty() {
-            line.push_str(&format!(" — {}", self.template.description.trim()));
+        let desc = self.template.description.trim();
+        if !desc.is_empty() {
+            let _ = write!(line, " — {}", desc);
         }
         if !self.template.args.items.is_empty() {
             let arg_names: Vec<_> = self
@@ -138,7 +140,7 @@ impl TemplateTool {
                 .iter()
                 .map(|arg| arg.name.as_str())
                 .collect();
-            line.push_str(&format!(" (args: {})", arg_names.join(", ")));
+            let _ = write!(line, " (args: {})", arg_names.join(", "));
         }
         line
     }
@@ -244,6 +246,7 @@ mod tests {
             args,
             lang: None,
             content: String::new(),
+            location: Default::default(),
         };
 
         let mut used_names = HashMap::new();

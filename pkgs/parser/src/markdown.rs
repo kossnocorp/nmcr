@@ -384,7 +384,7 @@ fn section_location(section: &Section, path: Option<&Path>) -> Location {
 
 fn make_location(path: Option<&Path>, span: Option<Span>) -> Location {
     Location {
-        path: path.map(|p| p.to_path_buf()).unwrap_or_default(),
+        path: path.map(Path::to_path_buf).unwrap_or_default(),
         span: span.unwrap_or_default(),
     }
 }
