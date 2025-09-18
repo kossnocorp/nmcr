@@ -71,14 +71,12 @@ impl ServerHandler for TemplateServer {
         }
     }
 
-    fn call_tool(
+    async fn call_tool(
         &self,
         request: CallToolRequestParam,
         context: RequestContext<RoleServer>,
-    ) -> impl std::future::Future<Output = Result<CallToolResult, McpError>> + Send + '_ {
-        async move {
-            let ctx = ToolCallContext::new(self, request, context);
-            self.tool_router.call(ctx).await
-        }
+    ) -> Result<CallToolResult, McpError> {
+        let ctx = ToolCallContext::new(self, request, context);
+        self.tool_router.call(ctx).await
     }
 }
