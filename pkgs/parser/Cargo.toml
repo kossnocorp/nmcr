@@ -1,6 +1,6 @@
 [package]
 name = "nmcr_parser"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2024"
 description = "Markdown-to-templates parser for nmcr"
 authors = ["Sasha Koss <koss@nocorp.me>"]
@@ -10,7 +10,7 @@ repository = "https://github.com/kossnocorp/nmcr"
 [dependencies]
 anyhow = "1.0.99"
 markdown = "1.0.0"
-nmcr_types = { version = "0.1.0", path = "../types" }
+nmcr_types = { version = "0.0.0", path = "../types" }
 
 [dev-dependencies]
 insta = { version = "1.39.0", features = ["glob"] }
