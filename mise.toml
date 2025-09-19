@@ -1,6 +1,6 @@
 [tools]
 # Stack
-rust = "latest"
+rust = "1.90"
 node = { version = "lts", postinstall = "corepack enable" }
 
 # Tools
