@@ -1,15 +1,15 @@
 use crate::prelude::*;
 use nmcr_parser::prelude::*;
 
-#[derive(clap::Args)]
+#[derive(Args)]
 pub struct GenArgs {}
 
+#[derive(Args)]
 pub struct GenCmd {}
 
 impl GenCmd {
-    pub async fn run<'a>(cli: &'a Cli, _args: &'a GenArgs) -> Result<()> {
-        let path = cli.resolve_project_path();
-        let project = Project::load(Some(path))?;
+    pub async fn run<'a>(args: &CliCommandProject<GenArgs>) -> Result<()> {
+        let project = args.load_project()?;
         let templates = project.template_paths()?;
 
         println!("Parsing markdown templates:");

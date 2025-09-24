@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(clap::Args)]
+#[derive(Args)]
 pub struct InitArgs {
     /// Optional path to initialize the project in
     #[arg()]
@@ -10,18 +10,20 @@ pub struct InitArgs {
     force: bool,
 }
 
+#[derive(Args)]
 pub struct InitCmd {}
 
 impl InitCmd {
-    pub async fn run<'a>(cli: &'a Cli, args: &'a InitArgs) -> Result<()> {
+    pub async fn run<'a>(args: &'a CliCommandProject<InitArgs>) -> Result<()> {
         let path = args
+            .local
             .path
             .clone()
-            .unwrap_or_else(|| cli.resolve_project_path());
+            .unwrap_or_else(|| args.resolve_project_path());
 
         let templates_glob = UiConfig::inquire_templates_glob()?;
 
-        let mut config = Config::init(&path, args.force)?;
+        let mut config = Config::init(&path, args.local.force)?;
         config.user.templates = templates_glob;
 
         config.write()?;

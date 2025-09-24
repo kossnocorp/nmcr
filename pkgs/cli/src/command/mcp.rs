@@ -1,13 +1,15 @@
 use crate::prelude::*;
+use nmcr_mcp::prelude::*;
 
-#[derive(clap::Args, Debug, Default)]
+#[derive(Args, Debug, Default)]
 pub struct McpArgs {}
 
+#[derive(Args)]
 pub struct McpCmd;
 
 impl McpCmd {
-    pub async fn run(cli: &Cli, _args: &McpArgs) -> Result<()> {
-        let path = cli.resolve_project_path();
-        nmcr_mcp::run_stdio(Some(path)).await
+    pub async fn run(args: &CliCommandProject<McpArgs>) -> Result<()> {
+        let project = args.load_project()?;
+        McpProtocolStdio::default().run(&project).await
     }
 }

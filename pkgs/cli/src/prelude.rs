@@ -3,7 +3,7 @@ pub use std::process::exit;
 pub use std::sync::LazyLock;
 
 pub use anyhow::Result;
-pub use clap::Parser;
+pub use clap::{Args, Parser, Subcommand};
 pub use console::{StyledObject, style};
 pub use dialoguer::{
     Input,
