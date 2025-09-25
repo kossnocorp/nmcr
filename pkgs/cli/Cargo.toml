@@ -1,6 +1,6 @@
 [package]
 name = "nmcr"
-version = "0.1.0"
+version = "0.0.0"
 edition = "2024"
 description = "Agent-enabled scaffolding & code generation tool"
 authors = ["Sasha Koss <koss@nocorp.me>"]

@@ -890,7 +890,7 @@ dependencies = [
 
 [[package]]
 name = "nmcr"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "clap",
@@ -922,7 +922,7 @@ dependencies = [
 
 [[package]]
 name = "nmcr_parser"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "indoc",
@@ -933,7 +933,7 @@ dependencies = [
 
 [[package]]
 name = "nmcr_project"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "config",
@@ -944,7 +944,7 @@ dependencies = [
 
 [[package]]
 name = "nmcr_types"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "serde",
 ]
