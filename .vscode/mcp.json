@@ -1,0 +1,7 @@
+{
+  "servers": {
+    "nmcr": {
+      "command": "./scripts/mcp.sh"
+    }
+  }
+}

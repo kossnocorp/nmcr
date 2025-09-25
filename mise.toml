@@ -7,6 +7,7 @@ node = { version = "lts", postinstall = "corepack enable" }
 cargo-binstall = "latest"        # Install Rust-based binaries instead of compiling
 "cargo:watchexec-cli" = "latest" # File watcher
 "cargo:cargo-insta" = "latest"   # Snapshot testing
+"npm:@openai/codex" = "latest"   # OpenAI Codex CLI
 
 [settings]
 experimental = true # Enable extra features
@@ -14,3 +15,7 @@ cargo.binstall = true # Enable cargo binstall
 idiomatic_version_file_enable_tools = [
   "rust",
 ] # Consume Rust toolchain settings from rust-toolchain.toml
+
+[tasks.setup]
+description = "Setup development environment"
+run = "./scripts/setup.sh"

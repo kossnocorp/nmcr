@@ -48,7 +48,7 @@ fn parse_str_with_path(
     if let Some(min_level) = min_allowed_level {
         let base_level = min_level.saturating_sub(1).max(1);
 
-        // Parent sections at base level that contain at lemdast one allowed subheading
+        // Parent sections at base level that contain at least one allowed subheading
         let mut templates = Vec::new();
         for parent in sections.iter().filter(|s| s.level == base_level) {
             if section_contains_allowed(parent)
@@ -58,12 +58,19 @@ fn parse_str_with_path(
             }
         }
 
+        let collection_meta = sections.iter().find(|s| s.level < base_level);
+        if let Some(meta) = collection_meta {
+            let collection_name = meta.title.clone();
+            for template in &mut templates {
+                template.collection = Some(collection_name.clone());
+            }
+        }
+
         match templates.len() {
             0 => bail!("No templates found in markdown"),
             1 => return Ok(ParsedMarkdown::Template(templates.remove(0))),
             _ => {
                 // Collection: choose collection meta from nearest header above base_level (usually H1)
-                let collection_meta = sections.iter().find(|s| s.level < base_level);
                 let (name, description) = if let Some(meta) = collection_meta {
                     (meta.title.clone(), collect_description(meta))
                 } else {
@@ -94,6 +101,7 @@ fn parse_str_with_path(
                 let tmpl = Template {
                     name: sec.title.clone(),
                     description: collect_description(sec),
+                    collection: None,
                     lang,
                     content,
                     location: section_location(sec, path),
@@ -163,6 +171,7 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
     let mut tmpl = Template {
         name: section.title.clone(),
         description: collect_description(section),
+        collection: None,
         ..Default::default()
     };
 

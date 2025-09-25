@@ -1,5 +1,7 @@
-mod prelude;
+pub mod prelude;
 mod server;
+pub(crate) use server::*;
 mod template;
-
-pub use server::run_stdio;
+pub(crate) use template::*;
+pub mod protocol;
+pub(crate) use protocol::*;

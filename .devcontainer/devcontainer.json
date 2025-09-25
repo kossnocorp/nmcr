@@ -38,7 +38,8 @@
         "tekumara.typos-vscode",
         "davidlday.languagetool-linter",
         "rust-lang.rust-analyzer",
-        "vadimcn.vscode-lldb"
+        "vadimcn.vscode-lldb",
+        "openai.chatgpt"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "fish",

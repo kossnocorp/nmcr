@@ -20,6 +20,7 @@ fn single() {
         Template {
             name: "Hello World",
             description: "This template prints a greeting.",
+            collection: None,
             args: TemplateArgs {
                 items: [],
             },
@@ -64,6 +65,7 @@ fn single_details() {
         Template {
             name: "Personalized Greeting",
             description: "Generates a personalized greeting.",
+            collection: None,
             args: TemplateArgs {
                 items: [
                     TemplateArg {
@@ -128,6 +130,9 @@ fn collection() {
         Template {
             name: "Friendly Greeting",
             description: "",
+            collection: Some(
+                "Greeting Templates",
+            ),
             args: TemplateArgs {
                 items: [
                     TemplateArg {

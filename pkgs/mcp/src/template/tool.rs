@@ -1,63 +1,5 @@
+use super::render_template;
 use crate::prelude::*;
-
-pub(crate) struct TemplateCatalog {
-    tools: Vec<TemplateTool>,
-}
-
-impl TemplateCatalog {
-    pub(crate) fn load(paths: &[PathBuf]) -> Result<Self> {
-        let mut tools = Vec::new();
-        let mut used_names: HashMap<String, usize> = HashMap::new();
-        let mut fallback_counter: usize = 1;
-
-        for path in paths {
-            let parsed = parse_file(path)
-                .with_context(|| format!("Failed to parse template file: {}", path.display()))?;
-            match parsed {
-                ParsedMarkdown::Template(template) => {
-                    tools.push(TemplateTool::from_template(
-                        template,
-                        &mut used_names,
-                        &mut fallback_counter,
-                    ));
-                }
-                ParsedMarkdown::Collection(collection) => {
-                    for template in collection.templates {
-                        tools.push(TemplateTool::from_template(
-                            template,
-                            &mut used_names,
-                            &mut fallback_counter,
-                        ));
-                    }
-                }
-            }
-        }
-
-        Ok(Self { tools })
-    }
-
-    pub(crate) fn is_empty(&self) -> bool {
-        self.tools.is_empty()
-    }
-
-    pub(crate) fn tools(&self) -> &[TemplateTool] {
-        &self.tools
-    }
-
-    pub(crate) fn instructions(&self) -> Option<String> {
-        if self.tools.is_empty() {
-            return None;
-        }
-
-        let mut lines = Vec::with_capacity(self.tools.len() + 1);
-        lines.push("Templates available via tools:".to_string());
-        for tool in &self.tools {
-            lines.push(tool.instructions_line());
-        }
-
-        Some(lines.join("\n"))
-    }
-}
 
 #[derive(Clone)]
 pub(crate) struct TemplateTool {
@@ -69,18 +11,32 @@ pub(crate) struct TemplateTool {
 }
 
 impl TemplateTool {
-    fn from_template(
-        template: Template,
-        used_names: &mut HashMap<String, usize>,
-        fallback_counter: &mut usize,
-    ) -> Self {
-        let mut base = Self::sanitize_tool_name(&template.name);
-        if base.is_empty() {
-            base = format!("template_{}", *fallback_counter);
-            *fallback_counter += 1;
+    pub(crate) fn from_template(template: Template, context: &mut TemplateCatalogContext) -> Self {
+        let mut segments: Vec<String> = Vec::new();
+        if let Some(group) = template.collection.as_ref() {
+            let sanitized = Self::sanitize_tool_name(group);
+            if !sanitized.is_empty() {
+                segments.push(sanitized);
+            }
         }
 
-        let suffix = used_names.entry(base.clone()).or_insert(0);
+        let name_segment = Self::sanitize_tool_name(&template.name);
+        if !name_segment.is_empty() {
+            segments.push(name_segment);
+        }
+
+        let mut base = if segments.is_empty() {
+            String::new()
+        } else {
+            segments.join("_")
+        };
+
+        if base.is_empty() {
+            base = format!("template_{}", context.fallback_counter);
+            context.fallback_counter += 1;
+        }
+
+        let suffix = context.used_names.entry(base.clone()).or_insert(0);
         let tool_name = if *suffix == 0 {
             base.clone()
         } else {
@@ -95,7 +51,7 @@ impl TemplateTool {
         };
 
         let description = if template.description.trim().is_empty() {
-            "Template execution is not yet implemented. Use the TODO result.".to_string()
+            format!("Render the {} template.", display_name)
         } else {
             template.description.trim().to_string()
         };
@@ -120,12 +76,19 @@ impl TemplateTool {
             self.description.clone(),
             self.schema.clone(),
         );
-        ToolRoute::new_dyn(tool, |_context| {
-            Box::pin(async { Ok(CallToolResult::success(vec![Content::text("TODO")])) })
+        let template = self.template.clone();
+
+        ToolRoute::new_dyn(tool, move |mut context| {
+            let template = template.clone();
+            Box::pin(async move {
+                let arguments = context.arguments.take().unwrap_or_default();
+                let rendered = render_template(&template.content, &arguments);
+                Ok(CallToolResult::success(vec![Content::text(rendered)]))
+            })
         })
     }
 
-    fn instructions_line(&self) -> String {
+    pub(crate) fn instructions_line(&self) -> String {
         let mut line = format!("- {} → {}", self.tool_name, self.display_name);
         if !self.template.description.trim().is_empty() {
             line.push_str(&format!(" — {}", self.template.description.trim()));
@@ -241,20 +204,35 @@ mod tests {
         let template = Template {
             name: "Component".into(),
             description: "Create a React component".into(),
+            collection: None,
             args,
             lang: None,
             content: String::new(),
             location: Location::default(),
         };
 
-        let mut used_names = HashMap::new();
-        let mut fallback_counter = 1;
-        let tool = TemplateTool::from_template(template, &mut used_names, &mut fallback_counter);
+        let tool = TemplateTool::from_template(template, &mut Default::default());
         let instructions = tool.instructions_line();
 
         assert_eq!(
             instructions,
             "- component → Component — Create a React component (args: name, with_css)"
         );
+    }
+
+    #[test]
+    fn tool_name_includes_collection_header() {
+        let template = Template {
+            name: "Package Gitignore".into(),
+            description: String::new(),
+            collection: Some("Rust".into()),
+            args: TemplateArgs::new(),
+            lang: None,
+            content: String::new(),
+            location: Location::default(),
+        };
+
+        let tool = TemplateTool::from_template(template, &mut Default::default());
+        assert_eq!(tool.tool_name, "rust_package_gitignore");
     }
 }

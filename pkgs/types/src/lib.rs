@@ -46,6 +46,7 @@ impl TemplateArgs {
 pub struct Template {
     pub name: String,
     pub description: String,
+    pub collection: Option<String>,
     pub args: TemplateArgs,
     pub lang: Option<String>,
     pub content: String,
