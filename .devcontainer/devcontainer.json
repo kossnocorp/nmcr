@@ -39,7 +39,10 @@
         "davidlday.languagetool-linter",
         "rust-lang.rust-analyzer",
         "vadimcn.vscode-lldb",
-        "openai.chatgpt"
+        "openai.chatgpt",
+        "github.vscode-github-actions",
+        "GitHub.vscode-pull-request-github",
+        "GitHub.remotehub"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "fish",
