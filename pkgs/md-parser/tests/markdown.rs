@@ -1,5 +1,5 @@
 use indoc::indoc;
-use nmcr_parser::markdown::parse_str;
+use nmcr_md_parser::markdown::parse_str;
 
 #[test]
 fn single() {

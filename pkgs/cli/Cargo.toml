@@ -21,6 +21,6 @@ toml = { version = "0.8.19", features = ["parse", "display"] }
 tokio = { version = "1.40.0", features = ["rt-multi-thread", "macros"] }
 console = "0.16.0"
 indicatif = { version = "0.18.0", features = ["tokio"] }
-nmcr_project = { version = "0.1.0", path = "../project" }
-nmcr_parser = { version = "0.1.0", path = "../parser" }
-nmcr_mcp = { version = "0.1.0", path = "../mcp" }
+nmcr_project = { version = "0.0.0", path = "../project" }
+nmcr_md_parser = { version = "0.0.0", path = "../md-parser" }
+nmcr_mcp = { version = "0.0.0", path = "../mcp" }

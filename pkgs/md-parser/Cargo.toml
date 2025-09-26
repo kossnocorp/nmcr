@@ -1,5 +1,5 @@
 [package]
-name = "nmcr_parser"
+name = "nmcr_md_parser"
 version = "0.0.0"
 edition = "2024"
 description = "Markdown-to-templates parser for nmcr"

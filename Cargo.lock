@@ -899,7 +899,7 @@ dependencies = [
  "dialoguer",
  "indicatif",
  "nmcr_mcp",
- "nmcr_parser",
+ "nmcr_md_parser",
  "nmcr_project",
  "serde",
  "tokio",
@@ -908,11 +908,11 @@ dependencies = [
 
 [[package]]
 name = "nmcr_mcp"
-version = "0.1.0"
+version = "0.0.0"
 dependencies = [
  "anyhow",
  "futures",
- "nmcr_parser",
+ "nmcr_md_parser",
  "nmcr_project",
  "nmcr_types",
  "pretty_assertions",
@@ -921,7 +921,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nmcr_parser"
+name = "nmcr_md_parser"
 version = "0.0.0"
 dependencies = [
  "anyhow",

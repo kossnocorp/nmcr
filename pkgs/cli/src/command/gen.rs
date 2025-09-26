@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use nmcr_parser::prelude::*;
+use nmcr_md_parser::prelude::*;
 
 #[derive(Args)]
 pub struct GenArgs {}
