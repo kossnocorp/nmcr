@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 pub trait McpProtocol {
+    #[allow(dead_code)]
     fn protocol_name(&self) -> &'static str;
 
     fn serve<'a>(

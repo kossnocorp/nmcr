@@ -14,7 +14,7 @@ pub struct InitArgs {
 pub struct InitCmd {}
 
 impl InitCmd {
-    pub async fn run<'a>(args: &'a CliCommandProject<InitArgs>) -> Result<()> {
+    pub async fn run(args: &CliCommandProject<InitArgs>) -> Result<()> {
         let path = args
             .local
             .path

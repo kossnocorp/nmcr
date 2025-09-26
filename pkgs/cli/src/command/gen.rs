@@ -8,7 +8,7 @@ pub struct GenArgs {}
 pub struct GenCmd {}
 
 impl GenCmd {
-    pub async fn run<'a>(args: &CliCommandProject<GenArgs>) -> Result<()> {
+    pub async fn run(args: &CliCommandProject<GenArgs>) -> Result<()> {
         let project = args.load_project()?;
         let templates = project.template_paths()?;
 

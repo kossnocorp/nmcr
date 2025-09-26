@@ -10,6 +10,6 @@ pub struct McpCmd;
 impl McpCmd {
     pub async fn run(args: &CliCommandProject<McpArgs>) -> Result<()> {
         let project = args.load_project()?;
-        McpProtocolStdio::default().run(&project).await
+        McpProtocolStdio.run(&project).await
     }
 }

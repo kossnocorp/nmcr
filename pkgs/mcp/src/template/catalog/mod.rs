@@ -2,7 +2,6 @@ use super::tool::TemplateTool;
 use crate::prelude::*;
 
 mod context;
-use context::*;
 pub(crate) use context::*;
 
 pub(crate) struct TemplateCatalog {

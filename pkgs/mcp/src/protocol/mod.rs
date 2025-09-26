@@ -1,4 +1,3 @@
-pub mod stdio;
-pub(crate) use stdio::*;
 mod index;
+pub mod stdio;
 pub(crate) use index::*;
