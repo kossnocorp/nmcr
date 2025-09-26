@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub(crate) fn render_template(content: &str, _args: &JsonMap<String, JsonValue>) -> String {
+pub fn render_template(content: &str, _args: &JsonMap<String, JsonValue>) -> String {
     content.to_string()
 }
 

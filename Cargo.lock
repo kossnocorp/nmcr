@@ -901,7 +901,10 @@ dependencies = [
  "nmcr_mcp",
  "nmcr_md_parser",
  "nmcr_project",
+ "nmcr_types",
  "serde",
+ "serde_json",
+ "tempfile",
  "tokio",
  "toml 0.8.23",
 ]
