@@ -1,3 +1,9 @@
+[tools]
+web_search = true
+
+[sandbox_workspace_write]
+network_access = true
+
 [mcp_servers.nmcr]
 command = "/wrkspc/nmcr/scripts/mcp.sh"
 startup_timeout_sec = 600

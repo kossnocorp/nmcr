@@ -1,17 +1,19 @@
-# Rust Lib
+# Rust Crate
 
-## `./Cargo.toml`
+## Lib
+
+### `./Cargo.toml`
 
 ```toml
 [package]
-name = "{{crate_name}}"
+name = "{{pkg_name}}"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
 ```
 
-## `./src/lib.rs`
+### `./src/lib.rs`
 
 ```rust
 pub fn add(left: u64, right: u64) -> u64 {

@@ -2,6 +2,10 @@
 
 ## Package Cargo.toml
 
+Crate manifest file.
+
+`Cargo.toml`:
+
 ```rust
 [package]
 name = "nmcr_{{name}}"
@@ -15,7 +19,11 @@ repository = "https://github.com/kossnocorp/nmcr"
 
 ## Package .gitignore
 
-```.gitignore
+Rust crate .gitignore file.
+
+`.gitignore`:
+
+```
 # Rust
 /target/
 # Temp

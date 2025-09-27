@@ -43,7 +43,9 @@
         "github.vscode-github-actions",
         "GitHub.vscode-pull-request-github",
         "GitHub.remotehub",
-        "nocorp.genotype"
+        "nocorp.genotype",
+        "MermaidChart.vscode-mermaid-chart",
+        "bierner.markdown-mermaid"
       ],
       "settings": {
         "terminal.integrated.defaultProfile.linux": "fish",
