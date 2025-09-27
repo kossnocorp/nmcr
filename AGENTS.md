@@ -59,7 +59,7 @@ When referencing elements, quote or style them exactly as they appear in the int
 
 ### Markdown Editing
 
-- After updating a Markdown document, run `pnpm prettier <path>.md --write` to normalize formatting.
+- After updating a Markdown document, run `prettier <path>.md --write` to normalize formatting.
 
 ### Git Usage
 
