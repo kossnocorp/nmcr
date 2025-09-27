@@ -163,7 +163,7 @@ impl TemplateTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nmcr_types::{Location, TemplateArg};
+    use nmcr_types_internal::{Location, TemplateArg};
     use pretty_assertions::assert_eq;
 
     fn make_arg(name: &str, description: &str, kind: TemplateArgType) -> TemplateArg {

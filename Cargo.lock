@@ -914,7 +914,7 @@ dependencies = [
  "futures",
  "nmcr_md_parser",
  "nmcr_project",
- "nmcr_types",
+ "nmcr_types_internal",
  "pretty_assertions",
  "rmcp",
  "serde_json",
@@ -928,7 +928,7 @@ dependencies = [
  "indoc",
  "insta",
  "markdown",
- "nmcr_types",
+ "nmcr_types_internal",
 ]
 
 [[package]]
@@ -943,7 +943,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "nmcr_types"
+name = "nmcr_types_internal"
 version = "0.0.0"
 dependencies = [
  "serde",
