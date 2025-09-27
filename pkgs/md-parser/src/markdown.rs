@@ -62,12 +62,6 @@ fn parse_str_with_path(
         }
 
         let collection_meta = sections.iter().find(|s| s.level < base_level);
-        if let Some(meta) = collection_meta {
-            let collection_name = meta.title.clone();
-            for template in &mut templates {
-                template.collection = Some(collection_name.clone());
-            }
-        }
 
         match templates.len() {
             0 => bail!("No templates found in markdown"),
@@ -113,7 +107,6 @@ fn parse_str_with_path(
                     id,
                     name: sec.title.clone(),
                     description: collect_description(sec),
-                    collection: None,
                     lang,
                     content,
                     location: section_location(sec, path),
@@ -198,7 +191,6 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
         id: EntityId::new().from_segments(section.path.iter().map(|s| s.as_str())),
         name: section.title.clone(),
         description: collect_description(section),
-        collection: None,
         ..Default::default()
     };
 

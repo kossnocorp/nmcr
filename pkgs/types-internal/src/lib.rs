@@ -22,8 +22,6 @@ pub struct Template {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub collection: Option<String>,
-    #[serde(default)]
     pub args: Vec<TemplateArg>,
     pub lang: Option<String>,
     pub content: String,

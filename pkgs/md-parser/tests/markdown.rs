@@ -21,7 +21,6 @@ fn single() {
             id: "hello_world",
             name: "Hello World",
             description: "This template prints a greeting.",
-            collection: None,
             args: [],
             lang: Some(
                 "python",
@@ -65,7 +64,6 @@ fn single_details() {
             id: "personalized_greeting",
             name: "Personalized Greeting",
             description: "Generates a personalized greeting.",
-            collection: None,
             args: [
                 TemplateArg {
                     name: "name",
@@ -129,9 +127,6 @@ fn collection() {
             id: "greeting_templates_friendly_greeting",
             name: "Friendly Greeting",
             description: "",
-            collection: Some(
-                "Greeting Templates",
-            ),
             args: [
                 TemplateArg {
                     name: "name",

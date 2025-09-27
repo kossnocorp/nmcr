@@ -33,7 +33,6 @@ mod tests {
             id: "duplicate".into(),
             name: "Example".into(),
             description: String::new(),
-            collection: None,
             args: Vec::new(),
             lang: None,
             content: String::new(),
