@@ -4,6 +4,7 @@ Template = {
   description: string,
   args: [./arg/Arg],
   lang?: string,
+  content: string,
   location: ./location/Location,
 }
 

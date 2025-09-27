@@ -107,10 +107,10 @@ fn parse_str_with_path(
                     id,
                     name: sec.title.clone(),
                     description: collect_description(sec),
+                    args: Vec::new(),
                     lang,
                     content,
                     location: section_location(sec, path),
-                    ..Default::default()
                 };
                 standalones.push(tmpl);
             }
@@ -191,7 +191,10 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
         id: EntityId::new().from_segments(section.path.iter().map(|s| s.as_str())),
         name: section.title.clone(),
         description: collect_description(section),
-        ..Default::default()
+        args: Vec::new(),
+        lang: None,
+        content: String::new(),
+        location: section_location(section, path),
     };
 
     if tmpl.id.is_empty() {
@@ -233,8 +236,6 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
         // No content yet — this section is not a complete template
         return Ok(None);
     }
-
-    tmpl.location = section_location(section, path);
 
     Ok(Some(tmpl))
 }
@@ -278,7 +279,7 @@ fn collect_code_blocks(nodes: &[mdast::Node]) -> Vec<(Option<String>, String)> {
     acc
 }
 
-fn parse_args(section: &Section) -> Vec<TemplateArg> {
+fn parse_args(section: &Section) -> Vec<Arg> {
     let mut args = Vec::new();
     for node in &section.nodes {
         match node {
@@ -287,20 +288,20 @@ fn parse_args(section: &Section) -> Vec<TemplateArg> {
                     if let mdast::Node::ListItem(li) = item
                         && let Some((name, desc)) = parse_arg_item(li)
                     {
-                        args.push(TemplateArg {
+                        args.push(Arg {
                             name,
                             description: desc,
-                            kind: TemplateArgType::Any,
+                            kind: ArgKind::Any(ArgKindAny),
                         });
                     }
                 }
             }
             mdast::Node::ListItem(item) => {
                 if let Some((name, desc)) = parse_arg_item(item) {
-                    args.push(TemplateArg {
+                    args.push(Arg {
                         name,
                         description: desc,
-                        kind: TemplateArgType::Any,
+                        kind: ArgKind::Any(ArgKindAny),
                     });
                 }
             }
@@ -428,7 +429,7 @@ fn section_location(section: &Section, path: Option<&Path>) -> Location {
 fn make_location(path: Option<&Path>, span: Option<Span>) -> Location {
     Location {
         path: path.map(|p| normalize_relative_path(p)).unwrap_or_default(),
-        span: span.unwrap_or_default(),
+        span: span.unwrap_or_else(|| Span { start: 0, end: 0 }),
     }
 }
 

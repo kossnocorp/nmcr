@@ -1,7 +1,8 @@
 use crate::prelude::*;
-use anyhow::{Context, anyhow};
+use anyhow::{anyhow, Context};
 use nmcr_md_parser::prelude::*;
-use nmcr_types_internal::{FormattedLocation, Location, Template};
+use nmcr_types::{Location, Template};
+use nmcr_types_internal::FormattedLocation;
 use std::collections::HashMap;
 
 #[derive(Args)]
@@ -56,8 +57,7 @@ fn register_template(template: &Template, seen: &mut HashMap<String, Location>) 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nmcr_types_internal::Span;
-
+    use nmcr_types::Span;
     fn make_template(path: &str, start: usize, end: usize) -> Template {
         Template {
             id: "duplicate".into(),

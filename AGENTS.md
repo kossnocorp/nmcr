@@ -74,3 +74,5 @@ When referencing elements, quote or style them exactly as they appear in the int
 ### Type Packages
 
 The packages `pkgs/types-rs`, `pkgs/types-ts`, and `pkgs/types-py` are generated from `pkgs/types-src` and should never be updated directly. Instead, make changes to `pkgs/types-src` and run `gt build pkgs/types-src` to regenerate them. The package manifests (`Cargo.toml`, `package.json`, `pyproject.toml`) are defined in `pkgs/types-src/genotype.toml`.
+
+- For a primer on the Genotype schema language and how it maps to Rust types, see `docs/stack/genotype.md`.

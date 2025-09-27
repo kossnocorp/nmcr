@@ -923,6 +923,7 @@ dependencies = [
  "nmcr_mcp",
  "nmcr_md_parser",
  "nmcr_project",
+ "nmcr_types",
  "nmcr_types_internal",
  "serde",
  "tokio",
@@ -944,6 +945,7 @@ dependencies = [
  "futures",
  "nmcr_md_parser",
  "nmcr_project",
+ "nmcr_types",
  "nmcr_types_internal",
  "pretty_assertions",
  "rmcp",
@@ -959,6 +961,7 @@ dependencies = [
  "insta",
  "markdown",
  "nmcr_id",
+ "nmcr_types",
  "nmcr_types_internal",
  "relative-path",
 ]
@@ -986,7 +989,7 @@ dependencies = [
 name = "nmcr_types_internal"
 version = "0.0.0"
 dependencies = [
- "serde",
+ "nmcr_types",
 ]
 
 [[package]]

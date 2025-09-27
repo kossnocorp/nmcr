@@ -10,6 +10,7 @@ repository = "https://github.com/kossnocorp/nmcr"
 [dependencies]
 anyhow = "1.0.99"
 markdown = "1.0.0"
+nmcr_types = { version = "0.1.0", path = "../types-rs" }
 nmcr_types_internal = { version = "0.0.0", path = "../types-internal" }
 nmcr_id = { version = "0.0.0", path = "../id" }
 relative-path = "1.9.3"

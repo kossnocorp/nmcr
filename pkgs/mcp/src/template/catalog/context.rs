@@ -1,5 +1,5 @@
 use crate::prelude::*;
-use nmcr_types_internal::{FormattedLocation, Location};
+use nmcr_types_internal::FormattedLocation;
 use std::collections::HashMap;
 
 #[derive(Default)]
@@ -26,7 +26,7 @@ impl TemplateCatalogContext {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nmcr_types_internal::Span;
+    use nmcr_types::Span;
 
     fn make_template(path: &str, start: usize, end: usize) -> Template {
         Template {

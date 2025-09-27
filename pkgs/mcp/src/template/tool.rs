@@ -75,24 +75,24 @@ impl TemplateTool {
         line
     }
 
-    fn args_schema(args: &[TemplateArg]) -> JsonMap<String, JsonValue> {
+    fn args_schema(args: &[Arg]) -> JsonMap<String, JsonValue> {
         let mut schema = JsonMap::new();
         schema.insert("type".into(), JsonValue::String("object".into()));
 
         let mut properties = JsonMap::new();
         for arg in args {
             let mut prop = JsonMap::new();
-            match arg.kind {
-                TemplateArgType::Boolean => {
+            match &arg.kind {
+                ArgKind::Boolean(_) => {
                     prop.insert("type".into(), JsonValue::String("boolean".into()));
                 }
-                TemplateArgType::String => {
+                ArgKind::String(_) => {
                     prop.insert("type".into(), JsonValue::String("string".into()));
                 }
-                TemplateArgType::Number => {
+                ArgKind::Number(_) => {
                     prop.insert("type".into(), JsonValue::String("number".into()));
                 }
-                TemplateArgType::Any => {}
+                ArgKind::Any(_) => {}
             }
 
             if !arg.description.trim().is_empty() {
@@ -114,14 +114,21 @@ impl TemplateTool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nmcr_types_internal::{Location, TemplateArg};
+    use nmcr_types::{ArgKindBoolean, ArgKindString, Span};
     use pretty_assertions::assert_eq;
 
-    fn make_arg(name: &str, description: &str, kind: TemplateArgType) -> TemplateArg {
-        TemplateArg {
+    fn make_arg(name: &str, description: &str, kind: ArgKind) -> Arg {
+        Arg {
             name: name.to_string(),
             description: description.to_string(),
             kind,
+        }
+    }
+
+    fn empty_location() -> Location {
+        Location {
+            path: String::new(),
+            span: Span { start: 0, end: 0 },
         }
     }
 
@@ -131,12 +138,12 @@ mod tests {
         args.push(make_arg(
             "name",
             "Name of the component",
-            TemplateArgType::String,
+            ArgKind::String(ArgKindString),
         ));
         args.push(make_arg(
             "with_css",
             "Generate CSS module",
-            TemplateArgType::Boolean,
+            ArgKind::Boolean(ArgKindBoolean),
         ));
 
         let template = Template {
@@ -146,7 +153,7 @@ mod tests {
             args,
             lang: None,
             content: String::new(),
-            location: Location::default(),
+            location: empty_location(),
         };
 
         let tool = TemplateTool::from_template(template);
@@ -167,7 +174,7 @@ mod tests {
             args: Vec::new(),
             lang: None,
             content: String::new(),
-            location: Location::default(),
+            location: empty_location(),
         };
 
         let tool = TemplateTool::from_template(template.clone());

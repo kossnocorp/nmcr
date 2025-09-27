@@ -8,6 +8,7 @@ pub struct Template {
     pub args: Vec<super::arg::Arg>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lang: Option<String>,
+    pub content: String,
     pub location: super::location::Location,
 }
 

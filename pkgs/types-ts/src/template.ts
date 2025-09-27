@@ -4,6 +4,7 @@ export interface Template {
   description: string;
   args: Array<import("./arg.js").Arg>;
   lang?: string | undefined;
+  content: string;
   location: import("./location.js").Location;
 }
 

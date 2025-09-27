@@ -12,6 +12,7 @@ anyhow = "1.0.99"
 futures = "0.3.31"
 nmcr_md_parser = { version = "0.0.0", path = "../md-parser" }
 nmcr_project = { version = "0.0.0", path = "../project" }
+nmcr_types = { version = "0.1.0", path = "../types-rs" }
 nmcr_types_internal = { version = "0.0.0", path = "../types-internal" }
 rmcp = { version = "0.6.4", features = ["transport-io"] }
 serde_json = "1.0.132"

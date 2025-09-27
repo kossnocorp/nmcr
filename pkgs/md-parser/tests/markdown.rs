@@ -65,10 +65,12 @@ fn single_details() {
             name: "Personalized Greeting",
             description: "Generates a personalized greeting.",
             args: [
-                TemplateArg {
+                Arg {
                     name: "name",
                     description: "Name to greet.",
-                    kind: Any,
+                    kind: Any(
+                        "any",
+                    ),
                 },
             ],
             lang: Some(
@@ -128,10 +130,12 @@ fn collection() {
             name: "Friendly Greeting",
             description: "",
             args: [
-                TemplateArg {
+                Arg {
                     name: "name",
                     description: "Name to greet.",
-                    kind: Any,
+                    kind: Any(
+                        "any",
+                    ),
                 },
             ],
             lang: Some(

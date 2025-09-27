@@ -10,6 +10,7 @@ class Template(Model):
     description: str
     args: list[Arg]
     lang: Optional[str] = None
+    content: str
     location: Location
 
 
