@@ -11,38 +11,8 @@ pub(crate) struct TemplateTool {
 }
 
 impl TemplateTool {
-    pub(crate) fn from_template(template: Template, context: &mut TemplateCatalogContext) -> Self {
-        let mut segments: Vec<String> = Vec::new();
-        if let Some(group) = template.collection.as_ref() {
-            let sanitized = Self::sanitize_tool_name(group);
-            if !sanitized.is_empty() {
-                segments.push(sanitized);
-            }
-        }
-
-        let name_segment = Self::sanitize_tool_name(&template.name);
-        if !name_segment.is_empty() {
-            segments.push(name_segment);
-        }
-
-        let mut base = if segments.is_empty() {
-            String::new()
-        } else {
-            segments.join("_")
-        };
-
-        if base.is_empty() {
-            base = format!("template_{}", context.fallback_counter);
-            context.fallback_counter += 1;
-        }
-
-        let suffix = context.used_names.entry(base.clone()).or_insert(0);
-        let tool_name = if *suffix == 0 {
-            base.clone()
-        } else {
-            format!("{}_{}", base, suffix)
-        };
-        *suffix += 1;
+    pub(crate) fn from_template(template: Template) -> Self {
+        let tool_name = template.id.clone();
 
         let display_name = if template.name.trim().is_empty() {
             format!("{} (untitled)", tool_name)
@@ -93,11 +63,10 @@ impl TemplateTool {
         if !self.template.description.trim().is_empty() {
             line.push_str(&format!(" — {}", self.template.description.trim()));
         }
-        if !self.template.args.items.is_empty() {
+        if !self.template.args.is_empty() {
             let arg_names: Vec<_> = self
                 .template
                 .args
-                .items
                 .iter()
                 .map(|arg| arg.name.as_str())
                 .collect();
@@ -106,12 +75,12 @@ impl TemplateTool {
         line
     }
 
-    fn args_schema(args: &TemplateArgs) -> JsonMap<String, JsonValue> {
+    fn args_schema(args: &[TemplateArg]) -> JsonMap<String, JsonValue> {
         let mut schema = JsonMap::new();
         schema.insert("type".into(), JsonValue::String("object".into()));
 
         let mut properties = JsonMap::new();
-        for arg in &args.items {
+        for arg in args {
             let mut prop = JsonMap::new();
             match arg.kind {
                 TemplateArgType::Boolean => {
@@ -140,24 +109,6 @@ impl TemplateTool {
         schema.insert("additionalProperties".into(), JsonValue::Bool(false));
         schema
     }
-
-    fn sanitize_tool_name(name: &str) -> String {
-        let mut cleaned = String::new();
-        let mut last_was_separator = false;
-        for ch in name.chars() {
-            if ch.is_ascii_alphanumeric() {
-                cleaned.push(ch.to_ascii_lowercase());
-                last_was_separator = false;
-            } else if !cleaned.is_empty() && !last_was_separator {
-                cleaned.push('_');
-                last_was_separator = true;
-            }
-        }
-        if cleaned.ends_with('_') {
-            cleaned.pop();
-        }
-        cleaned
-    }
 }
 
 #[cfg(test)]
@@ -175,33 +126,21 @@ mod tests {
     }
 
     #[test]
-    fn sanitize_tool_name_basic() {
-        assert_eq!(
-            TemplateTool::sanitize_tool_name("React Component"),
-            "react_component"
-        );
-        assert_eq!(
-            TemplateTool::sanitize_tool_name("  API::Client  "),
-            "api_client"
-        );
-        assert_eq!(TemplateTool::sanitize_tool_name("???"), "");
-    }
-
-    #[test]
     fn instructions_include_descriptions_and_args() {
-        let mut args = TemplateArgs::new();
-        args.items.push(make_arg(
+        let mut args = Vec::new();
+        args.push(make_arg(
             "name",
             "Name of the component",
             TemplateArgType::String,
         ));
-        args.items.push(make_arg(
+        args.push(make_arg(
             "with_css",
             "Generate CSS module",
             TemplateArgType::Boolean,
         ));
 
         let template = Template {
+            id: "component".into(),
             name: "Component".into(),
             description: "Create a React component".into(),
             collection: None,
@@ -211,7 +150,7 @@ mod tests {
             location: Location::default(),
         };
 
-        let tool = TemplateTool::from_template(template, &mut Default::default());
+        let tool = TemplateTool::from_template(template);
         let instructions = tool.instructions_line();
 
         assert_eq!(
@@ -221,18 +160,19 @@ mod tests {
     }
 
     #[test]
-    fn tool_name_includes_collection_header() {
+    fn tool_name_uses_template_id() {
         let template = Template {
+            id: "rust_package_gitignore".into(),
             name: "Package Gitignore".into(),
             description: String::new(),
             collection: Some("Rust".into()),
-            args: TemplateArgs::new(),
+            args: Vec::new(),
             lang: None,
             content: String::new(),
             location: Location::default(),
         };
 
-        let tool = TemplateTool::from_template(template, &mut Default::default());
-        assert_eq!(tool.tool_name, "rust_package_gitignore");
+        let tool = TemplateTool::from_template(template.clone());
+        assert_eq!(tool.tool_name, template.id);
     }
 }

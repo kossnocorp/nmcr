@@ -1,4 +1,6 @@
 use crate::prelude::*;
+use nmcr_id::EntityId;
+use relative_path::RelativePathBuf;
 
 #[derive(Clone, Debug)]
 struct Section {
@@ -6,6 +8,7 @@ struct Section {
     title: String,
     nodes: Vec<mdast::Node>,
     heading_span: Option<Span>,
+    path: Vec<String>,
 }
 
 const ALLOWED_SUBHEADS: &[&str] = &["args", "arguments", "template"];
@@ -98,7 +101,16 @@ fn parse_str_with_path(
             let mut codes = collect_code_blocks(&sec.nodes);
             if codes.len() == 1 {
                 let (lang, content) = codes.remove(0);
+                let id = EntityId::new().from_segments(sec.path.iter().map(|s| s.as_str()));
+                if id.is_empty() {
+                    bail!(
+                        "Unable to derive template id from headings: {}",
+                        sec.path.join(" > ")
+                    );
+                }
+
                 let tmpl = Template {
+                    id,
                     name: sec.title.clone(),
                     description: collect_description(sec),
                     collection: None,
@@ -135,7 +147,20 @@ fn make_sections(nodes: &[mdast::Node]) -> Vec<Section> {
         }
     }
     let mut sections = Vec::new();
+    let mut stack: Vec<(u8, String)> = Vec::new();
     for (idx, (start, level, title, span)) in heads.iter().enumerate() {
+        while let Some((stack_level, _)) = stack.last() {
+            if *stack_level >= *level {
+                stack.pop();
+            } else {
+                break;
+            }
+        }
+
+        let mut path: Vec<String> = stack.iter().map(|(_, t)| t.clone()).collect();
+        path.push(title.clone());
+        stack.push((*level, title.clone()));
+
         let end = heads
             .iter()
             .skip(idx + 1)
@@ -149,6 +174,7 @@ fn make_sections(nodes: &[mdast::Node]) -> Vec<Section> {
             title: title.clone(),
             nodes: inner,
             heading_span: span.clone(),
+            path,
         });
     }
     sections
@@ -169,11 +195,19 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
 
     // Name/description from section itself
     let mut tmpl = Template {
+        id: EntityId::new().from_segments(section.path.iter().map(|s| s.as_str())),
         name: section.title.clone(),
         description: collect_description(section),
         collection: None,
         ..Default::default()
     };
+
+    if tmpl.id.is_empty() {
+        bail!(
+            "Unable to derive template id from headings: {}",
+            section.path.join(" > ")
+        );
+    }
 
     // Args
     if let Some(args_sec) = subsections
@@ -252,8 +286,8 @@ fn collect_code_blocks(nodes: &[mdast::Node]) -> Vec<(Option<String>, String)> {
     acc
 }
 
-fn parse_args(section: &Section) -> TemplateArgs {
-    let mut args = TemplateArgs::new();
+fn parse_args(section: &Section) -> Vec<TemplateArg> {
+    let mut args = Vec::new();
     for node in &section.nodes {
         match node {
             mdast::Node::List(list) => {
@@ -261,13 +295,21 @@ fn parse_args(section: &Section) -> TemplateArgs {
                     if let mdast::Node::ListItem(li) = item
                         && let Some((name, desc)) = parse_arg_item(li)
                     {
-                        args.push(name, desc);
+                        args.push(TemplateArg {
+                            name,
+                            description: desc,
+                            kind: TemplateArgType::Any,
+                        });
                     }
                 }
             }
             mdast::Node::ListItem(item) => {
                 if let Some((name, desc)) = parse_arg_item(item) {
-                    args.push(name, desc);
+                    args.push(TemplateArg {
+                        name,
+                        description: desc,
+                        kind: TemplateArgType::Any,
+                    });
                 }
             }
             _ => {}
@@ -393,9 +435,14 @@ fn section_location(section: &Section, path: Option<&Path>) -> Location {
 
 fn make_location(path: Option<&Path>, span: Option<Span>) -> Location {
     Location {
-        path: path.map(|p| p.to_path_buf()).unwrap_or_default(),
+        path: path.map(|p| normalize_relative_path(p)).unwrap_or_default(),
         span: span.unwrap_or_default(),
     }
+}
+
+fn normalize_relative_path(path: &Path) -> String {
+    let normalized = path.to_string_lossy().replace('\\', "/");
+    RelativePathBuf::from(normalized).into_string()
 }
 
 fn inline_text(nodes: &[mdast::Node]) -> String {

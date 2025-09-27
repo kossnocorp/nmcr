@@ -1,0 +1,11 @@
+[package]
+name = "nmcr_id"
+version = "0.0.0"
+edition = "2024"
+description = "Deterministic ID generation helpers for nmcr"
+authors = ["Sasha Koss <koss@nocorp.me>"]
+license = "MIT"
+repository = "https://github.com/kossnocorp/nmcr"
+
+[dependencies]
+anyhow = "1.0.99"

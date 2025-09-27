@@ -18,12 +18,11 @@ fn single() {
     insta::assert_debug_snapshot!(parsed, @r#"
     Template(
         Template {
+            id: "hello_world",
             name: "Hello World",
             description: "This template prints a greeting.",
             collection: None,
-            args: TemplateArgs {
-                items: [],
-            },
+            args: [],
             lang: Some(
                 "python",
             ),
@@ -63,18 +62,17 @@ fn single_details() {
     insta::assert_debug_snapshot!(parsed, @r#"
     Template(
         Template {
+            id: "personalized_greeting",
             name: "Personalized Greeting",
             description: "Generates a personalized greeting.",
             collection: None,
-            args: TemplateArgs {
-                items: [
-                    TemplateArg {
-                        name: "name",
-                        description: "Name to greet.",
-                        kind: Any,
-                    },
-                ],
-            },
+            args: [
+                TemplateArg {
+                    name: "name",
+                    description: "Name to greet.",
+                    kind: Any,
+                },
+            ],
             lang: Some(
                 "handlebars",
             ),
@@ -128,20 +126,19 @@ fn collection() {
     insta::assert_debug_snapshot!(parsed, @r#"
     Template(
         Template {
+            id: "greeting_templates_friendly_greeting",
             name: "Friendly Greeting",
             description: "",
             collection: Some(
                 "Greeting Templates",
             ),
-            args: TemplateArgs {
-                items: [
-                    TemplateArg {
-                        name: "name",
-                        description: "Name to greet.",
-                        kind: Any,
-                    },
-                ],
-            },
+            args: [
+                TemplateArg {
+                    name: "name",
+                    description: "Name to greet.",
+                    kind: Any,
+                },
+            ],
             lang: Some(
                 "handlebars",
             ),

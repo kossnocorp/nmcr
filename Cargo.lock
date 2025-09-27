@@ -901,9 +901,17 @@ dependencies = [
  "nmcr_mcp",
  "nmcr_md_parser",
  "nmcr_project",
+ "nmcr_types_internal",
  "serde",
  "tokio",
  "toml 0.8.23",
+]
+
+[[package]]
+name = "nmcr_id"
+version = "0.0.0"
+dependencies = [
+ "anyhow",
 ]
 
 [[package]]
@@ -928,7 +936,9 @@ dependencies = [
  "indoc",
  "insta",
  "markdown",
+ "nmcr_id",
  "nmcr_types_internal",
+ "relative-path",
 ]
 
 [[package]]
@@ -1164,6 +1174,12 @@ name = "regex-syntax"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "caf4aa5b0f434c91fe5c7f1ecb6a5ece2130b02ad2a590589dda5146df959001"
+
+[[package]]
+name = "relative-path"
+version = "1.9.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba39f3699c378cd8970968dcbff9c43159ea4cfbd88d43c00b22f2ef10a435d2"
 
 [[package]]
 name = "rmcp"

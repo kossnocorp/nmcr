@@ -1,6 +1,5 @@
-use std::path::PathBuf;
-
 use serde::{Deserialize, Serialize};
+use std::fmt;
 
 #[derive(Default, Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TemplateArgType {
@@ -19,35 +18,13 @@ pub struct TemplateArg {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
-pub struct TemplateArgs {
-    pub items: Vec<TemplateArg>,
-}
-
-impl TemplateArgs {
-    pub fn new() -> Self {
-        Self { items: Vec::new() }
-    }
-    pub fn push(&mut self, name: impl Into<String>, description: impl Into<String>) {
-        self.items.push(TemplateArg {
-            name: name.into(),
-            description: description.into(),
-            kind: TemplateArgType::Any,
-        });
-    }
-    pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
-    }
-    pub fn len(&self) -> usize {
-        self.items.len()
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Template {
+    pub id: String,
     pub name: String,
     pub description: String,
     pub collection: Option<String>,
-    pub args: TemplateArgs,
+    #[serde(default)]
+    pub args: Vec<TemplateArg>,
     pub lang: Option<String>,
     pub content: String,
     pub location: Location,
@@ -69,6 +46,22 @@ pub struct Span {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Location {
-    pub path: PathBuf,
+    pub path: String,
     pub span: Span,
+}
+
+#[derive(Debug, Clone)]
+pub struct FormattedLocation<'a>(pub &'a Location);
+
+impl<'a> fmt::Display for FormattedLocation<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let location = self.0;
+        let path = if location.path.is_empty() {
+            "<memory>".to_string()
+        } else {
+            location.path.clone()
+        };
+
+        write!(f, "{}:{}-{}", path, location.span.start, location.span.end)
+    }
 }

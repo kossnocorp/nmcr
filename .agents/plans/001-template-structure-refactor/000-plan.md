@@ -6,11 +6,11 @@ Refactor template data models to include persistent IDs, enforce uniqueness, sim
 
 ## Plan
 
-- [ ] [Introduce template IDs](.agents/plans/001-template-structure-refactor/001-introduce-template-id.md): Add plain `String` IDs to `Template` and wire them up through a shared generator.
-- [ ] [Enforce template ID uniqueness](.agents/plans/001-template-structure-refactor/002-enforce-template-id-uniqueness.md): Replace the current conflict resolution by rejecting duplicate IDs during collection and generator flows using [`anyhow::Context`](https://docs.rs/anyhow/latest/anyhow/struct.Context.html) for messaging.
-- [ ] [Adopt relative location paths](.agents/plans/001-template-structure-refactor/003-stringify-location-path.md): Switch `Location.path` to [`RelativePathBuf`](https://docs.rs/relative-path/latest/relative_path/struct.RelativePathBuf.html) and normalize how paths are stored and serialized.
-- [ ] [Flatten template args](.agents/plans/001-template-structure-refactor/004-flatten-template-args.md): Remove the `TemplateArgs` wrapper and adapt APIs, serialization, and tests to use `Vec<TemplateArg>`.
-- [ ] [Document ID generation](.agents/plans/001-template-structure-refactor/005-document-id-generation.md): Capture the ID format and examples in project architecture docs and keep Genotype considerations in view ([link](https://github.com/kossnocorp/genotype)).
+- [x] [Introduce template IDs](.agents/plans/001-template-structure-refactor/001-introduce-template-id.md): Add plain `String` IDs to `Template` and wire them up through a shared generator.
+- [x] [Enforce template ID uniqueness](.agents/plans/001-template-structure-refactor/002-enforce-template-id-uniqueness.md): Replace the current conflict resolution by rejecting duplicate IDs during collection and generator flows using [`anyhow::Context`](https://docs.rs/anyhow/latest/anyhow/struct.Context.html) for messaging.
+- [x] [Adopt relative location paths](.agents/plans/001-template-structure-refactor/003-stringify-location-path.md): Store `Location.path` as a normalized `String` while using [`relative-path`](https://docs.rs/relative-path/latest/relative_path/) helpers internally to sanitize inputs.
+- [x] [Flatten template args](.agents/plans/001-template-structure-refactor/004-flatten-template-args.md): Remove the `TemplateArgs` wrapper and adapt APIs, serialization, and tests to use `Vec<TemplateArg>`.
+- [x] [Document ID generation](.agents/plans/001-template-structure-refactor/005-document-id-generation.md): Capture the ID format and examples in project architecture docs and keep Genotype considerations in view ([link](https://github.com/kossnocorp/genotype)).
 
 ## Steps
 

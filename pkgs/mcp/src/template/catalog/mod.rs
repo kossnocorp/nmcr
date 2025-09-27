@@ -2,7 +2,7 @@ use super::tool::TemplateTool;
 use crate::prelude::*;
 
 mod context;
-pub(crate) use context::*;
+use context::TemplateCatalogContext;
 
 pub(crate) struct TemplateCatalog {
     tools: Vec<TemplateTool>,
@@ -19,12 +19,14 @@ impl TemplateCatalog {
 
             match parsed {
                 ParsedMarkdown::Template(template) => {
-                    tools.push(TemplateTool::from_template(template, &mut context));
+                    context.claim_id(&template)?;
+                    tools.push(TemplateTool::from_template(template));
                 }
 
                 ParsedMarkdown::Collection(collection) => {
                     for template in collection.templates {
-                        tools.push(TemplateTool::from_template(template, &mut context));
+                        context.claim_id(&template)?;
+                        tools.push(TemplateTool::from_template(template));
                     }
                 }
             }

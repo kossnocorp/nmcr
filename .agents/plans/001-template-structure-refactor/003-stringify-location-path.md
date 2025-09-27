@@ -1,21 +1,21 @@
-# Adopt relative paths for locations
+# Normalize location paths
 
 ## Objective
 
-Represent template locations with [`RelativePathBuf`](https://docs.rs/relative-path/latest/relative_path/) from the `relative_path` crate so metadata stays portable and easy to stringify across languages.
+Keep location metadata portable by storing paths as normalized strings while using [`relative-path`](https://docs.rs/relative-path/latest/relative_path/) helpers to sanitize inputs where helpful.
 
 ## Tasks
 
-- [ ] **Audit `Location` usages** — identify every crate that constructs or reads `Location` to understand formatting expectations and serialization paths.
+- [x] **Audit `Location` usages** — identify every crate that constructs or reads `Location` to understand formatting expectations and serialization paths.
       Pay attention to deserializers, schema exports, and CLI output code.
-- [ ] **Update struct definitions** — change `Location.path` from `PathBuf` to `RelativePathBuf` in `pkgs/types-internal/src/lib.rs` and propagate that change through any public APIs or re-exports.
-      Adjust defaults and builders to accept the new type and add the crate dependency where needed.
-- [ ] **Normalize path handling** — ensure call sites convert filesystem paths to normalized, forward-slash relative paths before storing them in `RelativePathBuf`.
+- [x] **Update struct definitions** — change `Location.path` from `PathBuf` to a normalized `String` in `pkgs/types-internal/src/lib.rs` and propagate that change through any public APIs or re-exports.
+      Introduce `relative-path` helpers only where needed for normalization without changing the stored type.
+- [x] **Normalize path handling** — ensure call sites convert filesystem paths to normalized, forward-slash relative paths (using `relative-path` utilities internally) before storing them.
       Add lightweight helpers if normalization logic is repeated.
-- [ ] **Fix serialization contracts** — update Serde derives, schema generators, and TypeScript/Python bindings so they expect strings and serialize via `RelativePathBuf::as_str`, regenerating any JSON fixtures or samples.
-      Verify that deserialization from existing manifests still succeeds with the new type.
-- [ ] **Refresh tests and docs** — modify unit tests, snapshots, and documentation snippets that reference `PathBuf` to match the `RelativePathBuf` representation.
-      Rerun relevant test suites to confirm nothing relies on `PathBuf` behaviors.
+- [x] **Fix serialization contracts** — ensure Serde derives, schema generators, and TypeScript/Python bindings continue to expect strings, and regenerate any JSON fixtures or samples.
+      Verify that deserialization from existing manifests still succeeds with the normalized representation.
+- [x] **Refresh tests and docs** — modify unit tests, snapshots, and documentation snippets that referenced `PathBuf` so they match the normalized string representation.
+      Rerun relevant test suites to confirm nothing relies on the old type.
 
 ## Questions
 
@@ -23,4 +23,4 @@ None.
 
 ## Notes
 
-Keep stored paths platform-agnostic and relative to the project root for consistent downstream usage.
+Store strings in the canonical form expected by future bindings, leaning on `relative-path` utilities during parsing to avoid ad hoc normalization.
