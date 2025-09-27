@@ -1,13 +1,38 @@
-Template = {
+//! Template schema: single-file and tree templates, plus a collection wrapper.
+
+/// A single-file template node.
+TemplateFile = {
+  /// Discriminator for unions.
+  kind: "file",
   id: string,
   name: string,
   description: string,
   args: [./arg/Arg],
+  /// Optional language hint from the fenced code block.
   lang?: string,
+  /// Raw template content.
   content: string,
+  /// Optional relative path to use when writing to disk.
+  path?: string,
   location: ./location/Location,
 }
 
+/// A tree of template files grouped under a single heading.
+TemplateTree = {
+  /// Discriminator for unions.
+  kind: "tree",
+  id: string,
+  name: string,
+  /// Prose between the tree heading and the first file.
+  description: string,
+  files: [Template],
+  location: ./location/Location,
+}
+
+/// Union of templates.
+Template = TemplateTree | TemplateFile
+
+/// A collection of top-level templates parsed from a single markdown file.
 TemplateCollection = {
   name: string,
   description: string,

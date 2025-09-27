@@ -6,7 +6,7 @@ Backstop the new tree template functionality with automated tests and refreshed 
 
 ## Tasks
 
-- [ ] **Expand parser test coverage** — add fixtures exercising inline path extraction, tree detection, per-file template emission, and error cases (missing paths, malformed hierarchies) in `pkgs/md-parser/tests`.
+- [x] **Expand parser test coverage** — add fixtures exercising inline path extraction, tree detection, per-file template emission, and error cases (missing paths, malformed hierarchies) in `pkgs/md-parser/tests`.
       Verify legacy single-file templates continue to pass.
 - [ ] **Add CLI integration tests** — script end-to-end runs of `nmcr gen` covering `--print`, directory output, path-missing errors, and tree generation into nested directories.
       Use temporary workspaces to avoid polluting the repo.

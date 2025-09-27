@@ -6,6 +6,7 @@ use relative_path::RelativePathBuf;
 struct Section {
     level: u8,
     title: String,
+    heading_nodes: Vec<mdast::Node>,
     nodes: Vec<mdast::Node>,
     heading_span: Option<Span>,
     path: Vec<String>,
@@ -51,23 +52,94 @@ fn parse_str_with_path(
     if let Some(min_level) = min_allowed_level {
         let base_level = min_level.saturating_sub(1).max(1);
 
-        // Parent sections at base level that contain at least one allowed subheading
-        let mut templates = Vec::new();
-        for parent in sections.iter().filter(|s| s.level == base_level) {
-            if section_contains_allowed(parent)
-                && let Some(t) = parse_template_from_section(parent, path)?
-            {
-                templates.push(t);
+        // Gather file templates from sections at base level that contain allowed subheadings
+        let mut templates: Vec<Template> = Vec::new();
+        // Track mapping from parent section index to its direct child file templates
+        let mut parent_children: Vec<(usize, Vec<TemplateFile>)> = Vec::new();
+
+        // Build an index of sections by their original order
+        for (idx, parent) in sections
+            .iter()
+            .enumerate()
+            .filter(|(_, s)| s.level == base_level)
+        {
+            if section_contains_allowed(parent) {
+                if let Some(t) = parse_template_from_section(parent, path)? {
+                    templates.push(Template::TemplateFile(t.clone()));
+                }
+
+                // Direct children of this parent are sub-sections with greater level but not exceeding base_level+1
+                let children: Vec<Section> = make_sections(&parent.nodes)
+                    .into_iter()
+                    .filter(|s| s.level == base_level + 1)
+                    .collect();
+
+                let mut child_templates: Vec<TemplateFile> = Vec::new();
+                for child in &children {
+                    if section_contains_allowed(child) {
+                        if let Some(t) = parse_template_from_section(child, path)? {
+                            child_templates.push(t);
+                        }
+                    } else if let Some((lang, content)) =
+                        collect_code_blocks(&child.nodes).into_iter().next()
+                    {
+                        // Support simple child with a single code block (no subheads)
+                        let id =
+                            EntityId::new().from_segments(child.path.iter().map(|s| s.as_str()));
+                        if !id.is_empty() {
+                            let mut t = TemplateFile {
+                                kind: TemplateFileKindFile,
+                                id,
+                                name: child.title.clone(),
+                                description: collect_description(child),
+                                args: Vec::new(),
+                                lang,
+                                content,
+                                location: section_location(child, path),
+                                path: None,
+                            };
+                            // Attempt inline path capture
+                            t.path = extract_inline_path_before_code(&child.nodes);
+                            child_templates.push(t);
+                        }
+                    }
+                }
+
+                if !child_templates.is_empty() {
+                    parent_children.push((idx, child_templates));
+                }
             }
         }
 
-        let collection_meta = sections.iter().find(|s| s.level < base_level);
+        // Build trees: a section becomes a tree if all of its direct child templates have a path
+        let mut trees: Vec<TemplateTree> = Vec::new();
+        for (idx, files) in parent_children.into_iter() {
+            if files.iter().all(|t| t.path.is_some()) {
+                let parent = &sections[idx];
+                let id = EntityId::new().from_segments(parent.path.iter().map(|s| s.as_str()));
+                if id.is_empty() {
+                    continue;
+                }
+                let tree = TemplateTree {
+                    kind: TemplateTreeKindTree,
+                    id,
+                    name: parent.title.clone(),
+                    description: collect_tree_description(parent),
+                    files: files.into_iter().map(Template::TemplateFile).collect(),
+                    location: section_location(parent, path),
+                };
+                trees.push(tree);
+            }
+        }
 
-        match templates.len() {
-            0 => bail!("No templates found in markdown"),
-            1 => return Ok(ParsedMarkdown::Template(templates.remove(0))),
+        // Decide which top-level variant to return
+        let collection_meta = sections.iter().find(|s| s.level < base_level);
+        match (templates.len(), trees.len()) {
+            (0, 0) => bail!("No templates found in markdown"),
+            (0, 1) => return Ok(ParsedMarkdown::Tree(trees.remove(0))),
+            (1, 0) => return Ok(ParsedMarkdown::Template(templates.remove(0))),
             _ => {
-                // Collection: choose collection meta from nearest header above base_level (usually H1)
+                // Collection: include both file templates and any detected trees
                 let (name, description) = if let Some(meta) = collection_meta {
                     (meta.title.clone(), collect_description(meta))
                 } else {
@@ -76,10 +148,15 @@ fn parse_str_with_path(
                 let location = collection_meta
                     .map(|meta| section_location(meta, path))
                     .unwrap_or_else(|| make_location(path, root_span.clone()));
+                // Wrap trees into union templates
+                let mut all_templates = templates;
+                for tr in trees {
+                    all_templates.push(Template::TemplateTree(tr));
+                }
                 return Ok(ParsedMarkdown::Collection(TemplateCollection {
                     name,
                     description,
-                    templates,
+                    templates: all_templates,
                     location,
                 }));
             }
@@ -87,7 +164,7 @@ fn parse_str_with_path(
     }
 
     // Second pass: no allowed subheads — use code-block heuristic
-    let mut standalones = Vec::new();
+    let mut standalones: Vec<(TemplateFile, Vec<String>)> = Vec::new();
     for sec in &sections {
         let subsections = make_sections(&sec.nodes);
         let has_subheads = subsections.iter().any(|s| s.level > sec.level);
@@ -103,7 +180,8 @@ fn parse_str_with_path(
                     );
                 }
 
-                let tmpl = Template {
+                let mut tmpl = TemplateFile {
+                    kind: TemplateFileKindFile,
                     id,
                     name: sec.title.clone(),
                     description: collect_description(sec),
@@ -111,21 +189,75 @@ fn parse_str_with_path(
                     lang,
                     content,
                     location: section_location(sec, path),
+                    path: None,
                 };
-                standalones.push(tmpl);
+                tmpl.path = extract_inline_path_before_code(&sec.nodes)
+                    .or_else(|| extract_inline_path_from_heading(sec));
+                // Parent path (all but last segment)
+                let parent_path = if sec.path.len() > 1 {
+                    sec.path[..(sec.path.len() - 1)].to_vec()
+                } else {
+                    Vec::new()
+                };
+                standalones.push((tmpl, parent_path));
             }
         }
     }
 
     match standalones.len() {
         0 => bail!("No templates found in markdown"),
-        1 => Ok(ParsedMarkdown::Template(standalones.remove(0))),
-        _ => Ok(ParsedMarkdown::Collection(TemplateCollection {
-            name: file_stem.unwrap_or("Untitled").to_string(),
-            description: String::new(),
-            templates: standalones,
-            location: make_location(path, root_span),
-        })),
+        1 => Ok(ParsedMarkdown::Template(Template::TemplateFile(
+            standalones.remove(0).0,
+        ))),
+        _ => {
+            use std::collections::BTreeMap;
+            let mut groups: BTreeMap<Vec<String>, Vec<TemplateFile>> = BTreeMap::new();
+            for (t, parent) in standalones.into_iter() {
+                groups.entry(parent).or_default().push(t);
+            }
+
+            let mut templates: Vec<Template> = Vec::new();
+            let mut trees: Vec<TemplateTree> = Vec::new();
+
+            // Helper to find a section by its full path
+            let find_section =
+                |p: &Vec<String>| -> Option<&Section> { sections.iter().find(|s| &s.path == p) };
+
+            for (parent_path, files) in groups.into_iter() {
+                if !files.is_empty() && files.iter().all(|t| t.path.is_some()) {
+                    if let Some(parent_sec) = find_section(&parent_path) {
+                        let id = EntityId::new()
+                            .from_segments(parent_sec.path.iter().map(|s| s.as_str()));
+                        if !id.is_empty() {
+                            let tree = TemplateTree {
+                                kind: TemplateTreeKindTree,
+                                id,
+                                name: parent_sec.title.clone(),
+                                description: collect_tree_description(parent_sec),
+                                files: files
+                                    .clone()
+                                    .into_iter()
+                                    .map(Template::TemplateFile)
+                                    .collect(),
+                                location: section_location(parent_sec, path),
+                            };
+                            trees.push(tree);
+                        }
+                    }
+                }
+                templates.extend(files.into_iter().map(Template::TemplateFile));
+            }
+
+            for tr in trees {
+                templates.push(Template::TemplateTree(tr));
+            }
+            Ok(ParsedMarkdown::Collection(TemplateCollection {
+                name: file_stem.unwrap_or("Untitled").to_string(),
+                description: String::new(),
+                templates,
+                location: make_location(path, root_span),
+            }))
+        }
     }
 }
 
@@ -162,9 +294,15 @@ fn make_sections(nodes: &[mdast::Node]) -> Vec<Section> {
             .unwrap_or(nodes.len());
         // Nodes within this section excluding the heading line itself
         let inner = nodes[(start + 1)..end].to_vec();
+        let heading_nodes = if let mdast::Node::Heading(h) = &nodes[*start] {
+            h.children.clone()
+        } else {
+            Vec::new()
+        };
         sections.push(Section {
             level: *level,
             title: title.clone(),
+            heading_nodes,
             nodes: inner,
             heading_span: span.clone(),
             path,
@@ -183,11 +321,15 @@ fn is_allowed(title: &str) -> bool {
     ALLOWED_SUBHEADS.contains(&t.as_str())
 }
 
-fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result<Option<Template>> {
+fn parse_template_from_section(
+    section: &Section,
+    path: Option<&Path>,
+) -> Result<Option<TemplateFile>> {
     let subsections = make_sections(&section.nodes);
 
     // Name/description from section itself
-    let mut tmpl = Template {
+    let mut tmpl = TemplateFile {
+        kind: TemplateFileKindFile,
         id: EntityId::new().from_segments(section.path.iter().map(|s| s.as_str())),
         name: section.title.clone(),
         description: collect_description(section),
@@ -195,6 +337,7 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
         lang: None,
         content: String::new(),
         location: section_location(section, path),
+        path: None,
     };
 
     if tmpl.id.is_empty() {
@@ -232,6 +375,10 @@ fn parse_template_from_section(section: &Section, path: Option<&Path>) -> Result
         }
     }
 
+    // Inline path capture (before the first code block)
+    tmpl.path = extract_inline_path_before_code(&section.nodes)
+        .or_else(|| extract_inline_path_from_heading(section));
+
     if tmpl.content.is_empty() {
         // No content yet — this section is not a complete template
         return Ok(None);
@@ -262,6 +409,24 @@ fn collect_description(section: &Section) -> String {
     out.trim().to_string()
 }
 
+fn collect_tree_description(section: &Section) -> String {
+    // Description for a tree: prose before the first child heading
+    let mut out = String::new();
+    for node in &section.nodes {
+        match node {
+            mdast::Node::Heading(_) => break,
+            mdast::Node::Paragraph(p) => {
+                if !out.is_empty() {
+                    out.push_str("\n\n");
+                }
+                out.push_str(&inline_text(&p.children));
+            }
+            _ => {}
+        }
+    }
+    out.trim().to_string()
+}
+
 fn collect_code_blocks(nodes: &[mdast::Node]) -> Vec<(Option<String>, String)> {
     let mut acc: Vec<(Option<String>, String)> = Vec::new();
     for node in nodes {
@@ -277,6 +442,43 @@ fn collect_code_blocks(nodes: &[mdast::Node]) -> Vec<(Option<String>, String)> {
         }
     }
     acc
+}
+
+fn extract_inline_path_before_code(nodes: &[mdast::Node]) -> Option<String> {
+    for node in nodes {
+        match node {
+            mdast::Node::Code(_) => break,
+            mdast::Node::Paragraph(p) => {
+                // Heuristic: paragraph text ends with ':' and contains at least one inline code
+                let txt = inline_text(&p.children).trim().to_string();
+                if txt.ends_with(':') {
+                    // Use the first inline code as the path
+                    for child in &p.children {
+                        if let mdast::Node::InlineCode(ic) = child {
+                            let val = ic.value.trim();
+                            if !val.is_empty() {
+                                return Some(val.to_string());
+                            }
+                        }
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    None
+}
+
+fn extract_inline_path_from_heading(section: &Section) -> Option<String> {
+    for node in &section.heading_nodes {
+        if let mdast::Node::InlineCode(ic) = node {
+            let val = ic.value.trim();
+            if !val.is_empty() {
+                return Some(val.to_string());
+            }
+        }
+    }
+    None
 }
 
 fn parse_args(section: &Section) -> Vec<Arg> {

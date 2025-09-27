@@ -1,0 +1,17 @@
+//! Generation output shared by CLI and MCP.
+
+OutputFile = {
+  /// Optional relative path for this file in the output.
+  path?: string,
+  /// Optional language hint carried through for consumers.
+  lang?: string,
+  /// Rendered file content.
+  content: string,
+}
+
+OutputTree = {
+  files: [OutputFile],
+}
+
+Output = OutputTree | OutputFile
+

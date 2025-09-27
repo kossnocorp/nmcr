@@ -1,16 +1,18 @@
-use super::tool::TemplateTool;
+use super::{tool::TemplateTool, TreeTool};
 use crate::prelude::*;
 
 mod context;
 use context::TemplateCatalogContext;
 
 pub(crate) struct TemplateCatalog {
-    tools: Vec<TemplateTool>,
+    file_tools: Vec<TemplateTool>,
+    tree_tools: Vec<TreeTool>,
 }
 
 impl TemplateCatalog {
     pub(crate) fn load(paths: &[PathBuf]) -> Result<Self> {
-        let mut tools = Vec::new();
+        let mut file_tools: Vec<TemplateTool> = Vec::new();
+        let mut tree_tools: Vec<TreeTool> = Vec::new();
         let mut context = TemplateCatalogContext::default();
 
         for path in paths {
@@ -18,42 +20,69 @@ impl TemplateCatalog {
                 .with_context(|| format!("Failed to parse template file: {}", path.display()))?;
 
             match parsed {
-                ParsedMarkdown::Template(template) => {
-                    context.claim_id(&template)?;
-                    tools.push(TemplateTool::from_template(template));
+                ParsedMarkdown::Template(t) => match t {
+                    Template::TemplateFile(f) => {
+                        context.claim_id(&f.id, &f.location)?;
+                        file_tools.push(TemplateTool::from_template(f));
+                    }
+                    Template::TemplateTree(tr) => {
+                        // Add a tree tool
+                        tree_tools.push(TreeTool::from_tree(tr.clone()));
+                        for tf in tr.files {
+                            if let Template::TemplateFile(f) = tf {
+                                context.claim_id(&f.id, &f.location)?;
+                                file_tools.push(TemplateTool::from_template(f));
+                            }
+                        }
+                    }
+                },
+
+                ParsedMarkdown::Tree(tree) => {
+                    tree_tools.push(TreeTool::from_tree(tree.clone()));
+                    for tf in tree.files {
+                        if let Template::TemplateFile(f) = tf {
+                            context.claim_id(&f.id, &f.location)?;
+                            file_tools.push(TemplateTool::from_template(f));
+                        }
+                    }
                 }
 
                 ParsedMarkdown::Collection(collection) => {
-                    for template in collection.templates {
-                        context.claim_id(&template)?;
-                        tools.push(TemplateTool::from_template(template));
+                    for t in collection.templates {
+                        match t {
+                            Template::TemplateFile(f) => {
+                                context.claim_id(&f.id, &f.location)?;
+                                file_tools.push(TemplateTool::from_template(f));
+                            }
+                            Template::TemplateTree(tr) => {
+                                // Add a tree tool; files are already emitted as TemplateFile entries.
+                                tree_tools.push(TreeTool::from_tree(tr));
+                            }
+                        }
                     }
                 }
             }
         }
 
-        Ok(Self { tools })
+        Ok(Self { file_tools, tree_tools })
     }
 
     pub(crate) fn is_empty(&self) -> bool {
-        self.tools.is_empty()
+        self.file_tools.is_empty() && self.tree_tools.is_empty()
     }
 
-    pub(crate) fn tools(&self) -> &[TemplateTool] {
-        &self.tools
+    pub(crate) fn file_tools(&self) -> &[TemplateTool] {
+        &self.file_tools
+    }
+
+    pub(crate) fn tree_tools(&self) -> &[TreeTool] {
+        &self.tree_tools
     }
 
     pub(crate) fn instructions(&self) -> Option<String> {
-        if self.tools.is_empty() {
+        if self.is_empty() {
             return None;
         }
-
-        let mut lines = Vec::with_capacity(self.tools.len() + 1);
-        lines.push("Templates available via tools:".to_string());
-        for tool in &self.tools {
-            lines.push(tool.instructions_line());
-        }
-
-        Some(lines.join("\n"))
+        Some("Templates available via tools: refer to the tool list in your client".to_string())
     }
 }

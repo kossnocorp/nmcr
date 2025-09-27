@@ -6,15 +6,16 @@ Plan the remaining work to support tree-capable templates end to end: finalize t
 
 ## Plan
 
-- [ ] [Align Data Model](.agents/plans/003-tree-templates/001-align-data-model.md): Extend the Genotype schemas and generated Rust types to represent single-file and tree templates plus their outputs while staying consistent with prior refactors.
-- [ ] [Parse Tree Markdown](.agents/plans/003-tree-templates/002-parse-tree-markdown.md): Update the Markdown parser to extract paths, descriptions, and file nodes, populating the new tree structures without regressing collection support.
-- [ ] [Implement Generation](.agents/plans/003-tree-templates/003-implement-generation.md): Build real MCP/CLI execution paths—replacing the current `gen` playground—with logic that renders files or trees, honors path requirements, and supports the new `--print` flag semantics.
-- [ ] [Tests and Docs](.agents/plans/003-tree-templates/004-tests-docs.md): Cover the new behavior with automated tests and refresh documentation/examples so contributors can author and consume tree templates confidently.
+- [x] [Align Data Model](.agents/plans/003-tree-templates/001-align-data-model.md): Extend the Genotype schemas and generated Rust types to represent single-file and tree templates plus their outputs while staying consistent with prior refactors.
+- [x] [Parse Tree Markdown](.agents/plans/003-tree-templates/002-parse-tree-markdown.md): Update the Markdown parser to extract paths, descriptions, and file nodes, populating the new tree structures without regressing collection support.
+- [ ] [Implement Generation](.agents/plans/003-tree-templates/003-implement-generation.md): Build real MCP/CLI execution paths—replacing the current `gen` playground—with logic that renders files or trees, honors path requirements, and supports the new `--print` flag semantics. (CLI completed; MCP Structured Content pending.)
+- [ ] [Tests and Docs](.agents/plans/003-tree-templates/004-tests-docs.md): Cover the new behavior with automated tests and refresh documentation/examples so contributors can author and consume tree templates confidently. (Parser tests added; CLI/MCP tests and docs pending.)
 
 ## Steps
 
 - Reflect the updated Mermaid diagram (`Template` enum with `File`/`Tree` variants) inside `pkgs/types-src` by modelling `TemplateTree` (with description and file list) and ensuring `TemplateFile` carries optional path, language, args, and `Location` metadata.
 - Add a Genotype-defined `TemplateOutput` discriminated union with `File` and `Tree` variants so MCP responses and CLI dry runs can share the same representation.
+  (Implemented as `TemplateOutputFile` and `TemplateOutputTree` due to current Genotype union constraints.)
 - Regenerate `nmcr_types`, update downstream crates (prepped by plans 001 and 002) to compile with the new enum variants, and capture any serialization versioning notes needed for structured content consumers.
 
 ### [Parse Tree Markdown](.agents/plans/003-tree-templates/002-parse-tree-markdown.md)

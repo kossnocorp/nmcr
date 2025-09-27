@@ -2,6 +2,8 @@
 
 ## Lib
 
+Rust crate library template.
+
 ### `./Cargo.toml`
 
 ```toml

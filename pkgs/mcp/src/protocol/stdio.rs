@@ -19,8 +19,11 @@ impl McpProtocolStdio {
         }
 
         let mut tool_router = ToolRouter::new();
-        for tool in catalog.tools() {
+        for tool in catalog.file_tools() {
             tool_router.add_route(tool.route());
+        }
+        for tree in catalog.tree_tools() {
+            tool_router.add_route(tree.route());
         }
 
         let instructions = catalog.instructions();

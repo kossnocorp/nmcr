@@ -3,7 +3,7 @@ use crate::prelude::*;
 
 #[derive(Clone)]
 pub(crate) struct TemplateTool {
-    template: Template,
+    template: TemplateFile,
     tool_name: String,
     display_name: String,
     description: String,
@@ -11,7 +11,7 @@ pub(crate) struct TemplateTool {
 }
 
 impl TemplateTool {
-    pub(crate) fn from_template(template: Template) -> Self {
+    pub(crate) fn from_template(template: TemplateFile) -> Self {
         let tool_name = template.id.clone();
 
         let display_name = if template.name.trim().is_empty() {
@@ -53,7 +53,16 @@ impl TemplateTool {
             Box::pin(async move {
                 let arguments = context.arguments.take().unwrap_or_default();
                 let rendered = render_template(&template.content, &arguments);
-                Ok(CallToolResult::success(vec![Content::text(rendered)]))
+                let out = nmcr_types::OutputFile {
+                    path: template.path.clone(),
+                    lang: template.lang.clone(),
+                    content: rendered,
+                };
+                let output_schema = Self::output_schema(&template);
+                Ok(CallToolResult::success(vec![
+                    Content::json(out)?,
+                    Content::json(output_schema)?,
+                ]))
             })
         })
     }
@@ -109,6 +118,35 @@ impl TemplateTool {
         schema.insert("additionalProperties".into(), JsonValue::Bool(false));
         schema
     }
+
+    fn output_schema(t: &TemplateFile) -> JsonMap<String, JsonValue> {
+        let mut properties = JsonMap::new();
+        properties.insert("content".into(), json_type("string"));
+        properties.insert("lang".into(), json_type("string"));
+        if t.path.is_some() {
+            properties.insert("path".into(), json_type("string"));
+        }
+
+        let mut obj = JsonMap::new();
+        obj.insert("$schema".into(), JsonValue::String("https://json-schema.org/draft/2020-12/schema".into()));
+        obj.insert("title".into(), JsonValue::String(format!("{}:OutputFile", t.id)));
+        obj.insert("type".into(), JsonValue::String("object".into()));
+        obj.insert("properties".into(), JsonValue::Object(properties));
+
+        // Required keys: content always; path only if the template has a path defined
+        let mut required = vec![JsonValue::String("content".into())];
+        if t.path.is_some() {
+            required.push(JsonValue::String("path".into()));
+        }
+        obj.insert("required".into(), JsonValue::Array(required));
+        obj
+    }
+}
+
+pub(crate) fn json_type(t: &str) -> JsonValue {
+    let mut m = JsonMap::new();
+    m.insert("type".into(), JsonValue::String(t.to_string()));
+    JsonValue::Object(m)
 }
 
 #[cfg(test)]
@@ -146,13 +184,15 @@ mod tests {
             ArgKind::Boolean(ArgKindBoolean),
         ));
 
-        let template = Template {
+        let template = TemplateFile {
+            kind: nmcr_types::TemplateFileKindFile,
             id: "component".into(),
             name: "Component".into(),
             description: "Create a React component".into(),
             args,
             lang: None,
             content: String::new(),
+            path: None,
             location: empty_location(),
         };
 
@@ -167,13 +207,15 @@ mod tests {
 
     #[test]
     fn tool_name_uses_template_id() {
-        let template = Template {
+        let template = TemplateFile {
+            kind: nmcr_types::TemplateFileKindFile,
             id: "rust_package_gitignore".into(),
             name: "Package Gitignore".into(),
             description: String::new(),
             args: Vec::new(),
             lang: None,
             content: String::new(),
+            path: None,
             location: empty_location(),
         };
 

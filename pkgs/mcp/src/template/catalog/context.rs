@@ -8,17 +8,16 @@ pub(crate) struct TemplateCatalogContext {
 }
 
 impl TemplateCatalogContext {
-    pub(crate) fn claim_id(&mut self, template: &Template) -> Result<()> {
-        if let Some(existing) = self.claimed.get(&template.id) {
+    pub(crate) fn claim_id(&mut self, id: &str, location: &Location) -> Result<()> {
+        if let Some(existing) = self.claimed.get(id) {
             let first = FormattedLocation(existing).to_string();
-            let duplicate = FormattedLocation(&template.location).to_string();
-            return Err(anyhow!("Duplicate template id: {}", template.id))
+            let duplicate = FormattedLocation(location).to_string();
+            return Err(anyhow!("Duplicate template id: {}", id))
                 .with_context(|| format!("duplicate occurrence at {duplicate}"))
                 .with_context(|| format!("first occurrence at {first}"));
         }
 
-        self.claimed
-            .insert(template.id.clone(), template.location.clone());
+        self.claimed.insert(id.to_string(), location.clone());
         Ok(())
     }
 }
@@ -28,32 +27,24 @@ mod tests {
     use super::*;
     use nmcr_types::Span;
 
-    fn make_template(path: &str, start: usize, end: usize) -> Template {
-        Template {
-            id: "duplicate".into(),
-            name: "Example".into(),
-            description: String::new(),
-            args: Vec::new(),
-            lang: None,
-            content: String::new(),
-            location: Location {
-                path: path.to_string(),
-                span: Span { start, end },
-            },
+    fn make_location(path: &str, start: usize, end: usize) -> Location {
+        Location {
+            path: path.to_string(),
+            span: Span { start, end },
         }
     }
 
     #[test]
     fn duplicate_ids_return_error() {
         let mut context = TemplateCatalogContext::default();
-        let first = make_template("templates/a.md", 1, 10);
+        let first_loc = make_location("templates/a.md", 1, 10);
         context
-            .claim_id(&first)
+            .claim_id("duplicate", &first_loc)
             .expect("first registration succeeds");
 
-        let second = make_template("templates/b.md", 5, 15);
+        let second_loc = make_location("templates/b.md", 5, 15);
         let err = context
-            .claim_id(&second)
+            .claim_id("duplicate", &second_loc)
             .expect_err("duplicate should fail");
 
         let rendered = format!("{err:?}");
