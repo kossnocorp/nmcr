@@ -1,0 +1,12 @@
+name = "nmcr-types"
+version = "0.1.0"
+[tool.poetry]
+packages = [{ include = "module" }]
+
+[tool.poetry.dependencies]
+python = "^3.12"
+genotype-runtime = "^0.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

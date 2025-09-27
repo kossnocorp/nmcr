@@ -1,0 +1,42 @@
+name = "nmcr_types"
+root = ""
+out = ".."
+src = "src"
+entry = "**/*.type"
+
+[ts]
+enabled = true
+out = "types-ts"
+
+[ts.manifest]
+name = "@nmcr/types"
+version = "0.1.0"
+
+[ts.dependencies]
+
+[ts.tsconfig]
+allowImportingTsExtensions = false
+
+[py]
+enabled = true
+module = "module"
+version = "latest"
+out = "types-py"
+
+[py.manifest]
+name = "nmcr-types"
+version = "0.1.0"
+
+[py.dependencies]
+
+[rs]
+enabled = true
+derive = ["Debug", "Clone", "PartialEq"]
+out = "types-rs"
+
+[rs.manifest.package]
+name = "nmcr_types"
+version = "0.1.0"
+edition = "2024"
+
+[rs.manifest.dependencies]

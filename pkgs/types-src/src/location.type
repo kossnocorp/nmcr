@@ -1,0 +1,4 @@
+Location = {
+  path: string,
+  span: ./span/Span,
+}

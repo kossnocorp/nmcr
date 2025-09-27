@@ -1,0 +1,7 @@
+Arg = {
+  name: string,
+  description: string,
+  kind: ArgKind,
+}
+
+ArgKind = "any" | "boolean" | "string" | "number"

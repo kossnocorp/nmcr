@@ -1,0 +1,15 @@
+Template = {
+  id: string,
+  name: string,
+  description: string,
+  args: [./arg/Arg],
+  lang?: string,
+  location: ./location/Location,
+}
+
+TemplateCollection = {
+  name: string,
+  description: string,
+  templates: [Template],
+  location: ./location/Location,
+}

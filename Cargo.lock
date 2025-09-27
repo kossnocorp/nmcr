@@ -842,6 +842,28 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "df1d3c3b53da64cf5760482273a98e575c651a67eec7f77df96b5b642de8f039"
 
 [[package]]
+name = "litty"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f1adaf3c9f44eaf4e8f51d824720465599b9804fe9eeabc2cb9f30dda9d021a1"
+dependencies = [
+ "litty_macro",
+ "serde",
+]
+
+[[package]]
+name = "litty_macro"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "43ca1bfd11968d73426a57a148cbea4d5e8f54c2275a0eb8aa14a19a3e5f1894"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "serde",
+ "syn",
+]
+
+[[package]]
 name = "log"
 version = "0.4.28"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -950,6 +972,14 @@ dependencies = [
  "serde",
  "toml 0.8.23",
  "wax",
+]
+
+[[package]]
+name = "nmcr_types"
+version = "0.1.0"
+dependencies = [
+ "litty",
+ "serde",
 ]
 
 [[package]]

@@ -70,3 +70,7 @@ When referencing elements, quote or style them exactly as they appear in the int
 ### Template metadata
 
 - The deterministic template ID format and generator live in `docs/architecture/id.md`.
+
+### Type Packages
+
+The packages `pkgs/types-rs`, `pkgs/types-ts`, and `pkgs/types-py` are generated from `pkgs/types-src` and should never be updated directly. Instead, make changes to `pkgs/types-src` and run `gt build pkgs/types-src` to regenerate them. The package manifests (`Cargo.toml`, `package.json`, `pyproject.toml`) are defined in `pkgs/types-src/genotype.toml`.

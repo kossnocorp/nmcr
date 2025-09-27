@@ -9,6 +9,7 @@ cargo-binstall = "latest"        # Install Rust-based binaries instead of compil
 "cargo:cargo-insta" = "latest"   # Snapshot testing
 "npm:@openai/codex" = "latest"   # OpenAI Codex CLI
 "npm:prettier" = "latest"        # Code formatter
+"cargo:genotype_cli" ="latest"   # Meta language for cross-language types generation
 
 [settings]
 experimental = true # Enable extra features

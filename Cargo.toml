@@ -7,4 +7,5 @@ members = [
   "pkgs/id",
   "pkgs/project",
   "pkgs/types-internal",
+  "pkgs/types-rs",
 ]
