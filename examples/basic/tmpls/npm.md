@@ -9,7 +9,7 @@
   "description": "{{description}}",
   "main": "index.js",
   "scripts": {},
-  "author": "{{}}",
+  "author": "{{author}}",
   "license": "MIT"
 }
 ```
