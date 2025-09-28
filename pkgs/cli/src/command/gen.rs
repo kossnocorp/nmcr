@@ -149,11 +149,10 @@ impl GenCmd {
             }
             // Validate all files have paths
             for t in &tree.files {
-                if let Template::TemplateFile(f) = t {
-                    if f.path.is_none() {
+                if let Template::TemplateFile(f) = t
+                    && f.path.is_none() {
                         bail!("Tree '{}' contains a file without a path (file id '{}').", tree.id, f.id);
                     }
-                }
             }
             for t in &tree.files {
                 let f = match t { Template::TemplateFile(f) => f, _ => continue };

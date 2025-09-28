@@ -224,8 +224,8 @@ fn parse_str_with_path(
                 |p: &Vec<String>| -> Option<&Section> { sections.iter().find(|s| &s.path == p) };
 
             for (parent_path, files) in groups.into_iter() {
-                if !files.is_empty() && files.iter().all(|t| t.path.is_some()) {
-                    if let Some(parent_sec) = find_section(&parent_path) {
+                if !files.is_empty() && files.iter().all(|t| t.path.is_some())
+                    && let Some(parent_sec) = find_section(&parent_path) {
                         let id = EntityId::new()
                             .from_segments(parent_sec.path.iter().map(|s| s.as_str()));
                         if !id.is_empty() {
@@ -244,7 +244,6 @@ fn parse_str_with_path(
                             trees.push(tree);
                         }
                     }
-                }
                 templates.extend(files.into_iter().map(Template::TemplateFile));
             }
 
@@ -630,8 +629,8 @@ fn section_location(section: &Section, path: Option<&Path>) -> Location {
 
 fn make_location(path: Option<&Path>, span: Option<Span>) -> Location {
     Location {
-        path: path.map(|p| normalize_relative_path(p)).unwrap_or_default(),
-        span: span.unwrap_or_else(|| Span { start: 0, end: 0 }),
+        path: path.map(normalize_relative_path).unwrap_or_default(),
+        span: span.unwrap_or(Span { start: 0, end: 0 }),
     }
 }
 

@@ -1,6 +1,6 @@
 use super::render_template;
-use crate::prelude::*;
 use super::tool::json_type;
+use crate::prelude::*;
 
 #[derive(Clone)]
 pub(crate) struct TreeTool {
@@ -100,9 +100,14 @@ impl TreeTool {
                         ArgKind::Any(_) => {}
                     }
                     if !arg.description.trim().is_empty() {
-                        prop.insert("description".into(), JsonValue::String(arg.description.clone()));
+                        prop.insert(
+                            "description".into(),
+                            JsonValue::String(arg.description.clone()),
+                        );
                     }
-                    properties.entry(arg.name.clone()).or_insert(JsonValue::Object(prop));
+                    properties
+                        .entry(arg.name.clone())
+                        .or_insert(JsonValue::Object(prop));
                 }
             }
         }
@@ -113,7 +118,10 @@ impl TreeTool {
 
     fn output_schema(tree: &TemplateTree) -> JsonMap<String, JsonValue> {
         // Build item schema; require path only if every file has a path
-        let all_have_path = tree.files.iter().all(|t| match t { Template::TemplateFile(f) => f.path.is_some(), _ => true });
+        let all_have_path = tree.files.iter().all(|t| match t {
+            Template::TemplateFile(f) => f.path.is_some(),
+            _ => true,
+        });
         let mut item_props = JsonMap::new();
         item_props.insert("content".into(), json_type("string"));
         item_props.insert("lang".into(), json_type("string"));
@@ -124,7 +132,9 @@ impl TreeTool {
         item.insert("type".into(), JsonValue::String("object".into()));
         item.insert("properties".into(), JsonValue::Object(item_props));
         let mut req = vec![JsonValue::String("content".into())];
-        if all_have_path { req.push(JsonValue::String("path".into())); }
+        if all_have_path {
+            req.push(JsonValue::String("path".into()));
+        }
         item.insert("required".into(), JsonValue::Array(req));
 
         let mut props = JsonMap::new();
@@ -134,11 +144,20 @@ impl TreeTool {
         props.insert("files".into(), JsonValue::Object(files));
 
         let mut schema = JsonMap::new();
-        schema.insert("$schema".into(), JsonValue::String("https://json-schema.org/draft/2020-12/schema".into()));
-        schema.insert("title".into(), JsonValue::String(format!("{}:OutputTree", tree.id)));
+        schema.insert(
+            "$schema".into(),
+            JsonValue::String("https://json-schema.org/draft/2020-12/schema".into()),
+        );
+        schema.insert(
+            "title".into(),
+            JsonValue::String(format!("{}:OutputTree", tree.id)),
+        );
         schema.insert("type".into(), JsonValue::String("object".into()));
         schema.insert("properties".into(), JsonValue::Object(props));
-        schema.insert("required".into(), JsonValue::Array(vec![JsonValue::String("files".into())]));
+        schema.insert(
+            "required".into(),
+            JsonValue::Array(vec![JsonValue::String("files".into())]),
+        );
         schema
     }
 }

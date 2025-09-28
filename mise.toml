@@ -21,3 +21,7 @@ idiomatic_version_file_enable_tools = [
 [tasks.setup]
 description = "Setup development environment"
 run = "./scripts/setup.sh"
+
+[tasks.fix]
+description = "Fix code style issues"
+run = "cargo clippy --fix --all-features --allow-dirty"
