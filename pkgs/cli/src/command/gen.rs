@@ -1,11 +1,9 @@
 use crate::prelude::*;
 use anyhow::{Context, anyhow, bail};
-use nmcr_md_parser::prelude::*;
+use nmcr_catalog::{CatalogTree, FileRef as CatalogFileRef, TemplateCatalog};
 use nmcr_template::TemplateRenderer;
-use nmcr_types::{Location, OutputFile, OutputTree, Template, TemplateFile, TemplateTree};
-use nmcr_types_internal::FormattedLocation;
+use nmcr_types::{OutputFile, OutputTree, TemplateFile};
 use serde_json::{Map as JsonMap, Number as JsonNumber, Value as JsonValue};
-use std::collections::HashMap;
 use std::fs;
 use std::io::{self, Write};
 use std::path::PathBuf as FsPathBuf;
@@ -24,7 +22,7 @@ pub struct GenArgs {
     #[arg(long)]
     pub print: bool,
 
-    /// Template arguments in key=value form
+    /// Template arguments in key=value form (or a positional output path followed by args)
     #[arg(index = 2, value_name = "key=value", num_args = 0.., allow_hyphen_values = true)]
     pub pairs: Vec<String>,
 }
@@ -36,55 +34,7 @@ impl GenCmd {
     pub async fn run(args: &CliCommandProject<GenArgs>) -> Result<()> {
         let project = args.load_project()?;
         let paths = project.template_paths()?;
-
-        // Collect templates and trees
-        let mut files: HashMap<String, TemplateFile> = HashMap::new();
-        let mut trees: HashMap<String, TemplateTree> = HashMap::new();
-        let mut ids_seen: HashMap<String, Location> = HashMap::new();
-
-        for p in &paths {
-            match parse_file(p) {
-                Ok(ParsedMarkdown::Template(t)) => match t {
-                    Template::TemplateFile(f) => {
-                        register_id(&f.id, &f.location, &mut ids_seen)?;
-                        files.insert(f.id.clone(), f);
-                    }
-                    Template::TemplateTree(tr) => {
-                        for tf in &tr.files {
-                            if let Template::TemplateFile(f) = tf {
-                                register_id(&f.id, &f.location, &mut ids_seen)?;
-                            }
-                        }
-                        trees.insert(tr.id.clone(), tr);
-                    }
-                },
-                Ok(ParsedMarkdown::Tree(tree)) => {
-                    for t in &tree.files {
-                        if let Template::TemplateFile(f) = t {
-                            register_id(&f.id, &f.location, &mut ids_seen)?;
-                        }
-                    }
-                    trees.insert(tree.id.clone(), tree);
-                }
-                Ok(ParsedMarkdown::Collection(c)) => {
-                    for t in c.templates {
-                        match t {
-                            Template::TemplateFile(f) => {
-                                register_id(&f.id, &f.location, &mut ids_seen)?;
-                                files.insert(f.id.clone(), f);
-                            }
-                            Template::TemplateTree(tr) => {
-                                // Do not re-register files inside the tree; they appear above as TemplateFile entries.
-                                trees.insert(tr.id.clone(), tr);
-                            }
-                        }
-                    }
-                }
-                Err(err) => {
-                    println!("! Failed to parse {}: {err}", p.display());
-                }
-            }
-        }
+        let catalog = TemplateCatalog::load(&paths)?;
 
         let id = &args.local.id;
         let print = args.local.print;
@@ -102,120 +52,124 @@ impl GenCmd {
         let args_map = build_context_map(&positional_pairs)?;
         let renderer = TemplateRenderer::new();
 
-        // Match id and execute
-        if let Some(t) = files.get(id) {
-            let rendered = render_template_file(&renderer, t, &args_map)?;
-            if print {
-                print!("{}", rendered.content);
-                io::stdout().flush()?;
-                return Ok(());
-            }
-
-            let root = out_dir.clone().ok_or_else(|| {
-                anyhow!(
-                    "--print not set and no output path provided. Pass --out <path> or supply a positional path."
-                )
-            })?;
-
-            // Require path for file writes
-            let rel = rendered.path.as_ref().ok_or_else(|| {
-                anyhow!(
-                    "Template '{}' has no path; supply --print to inspect output or select a tree template.",
-                    t.id
-                )
-            })?;
-            let target = root.join(rel);
-            if let Some(parent) = target.parent() {
-                fs::create_dir_all(parent)?;
-            }
-            fs::write(&target, rendered.content)?;
-            println!("Wrote {}", target.display());
-            return Ok(());
+        if let Some(file_ref) = catalog.get_file(id) {
+            return handle_file(&renderer, file_ref, out_dir, print, &args_map);
         }
 
-        if let Some(tree) = trees.get(id) {
-            if print {
-                let files_out: Vec<OutputFile> = tree
-                    .files
-                    .iter()
-                    .filter_map(|t| match t {
-                        Template::TemplateFile(f) => Some(f),
-                        _ => None,
-                    })
-                    .map(|f| render_template_file(&renderer, f, &args_map))
-                    .collect::<Result<_>>()?;
-                let out = OutputTree { files: files_out };
-                println!("{}", serde_json::to_string_pretty(&out)?);
-                return Ok(());
-            }
-
-            let root = out_dir.clone().ok_or_else(|| {
-                anyhow!(
-                    "--print not set and no output path provided. Pass --out <path> or supply a positional path."
-                )
-            })?;
-            if !root.exists() {
-                fs::create_dir_all(&root)?;
-            }
-            if !root.is_dir() {
-                bail!("Output path '{}' is not a directory.", root.display());
-            }
-            // Validate all files have paths
-            for t in &tree.files {
-                if let Template::TemplateFile(f) = t
-                    && f.path.is_none()
-                {
-                    bail!(
-                        "Tree '{}' contains a file without a path (file id '{}').",
-                        tree.id,
-                        f.id
-                    );
-                }
-            }
-            for t in &tree.files {
-                let f = match t {
-                    Template::TemplateFile(f) => f,
-                    _ => continue,
-                };
-                let rendered = render_template_file(&renderer, f, &args_map)?;
-                let rel = rendered.path.as_ref().ok_or_else(|| {
-                    anyhow!(
-                        "Tree '{}' file '{}' is missing a path after rendering.",
-                        tree.id,
-                        f.id
-                    )
-                })?;
-                let target = root.join(rel);
-                if let Some(parent) = target.parent() {
-                    fs::create_dir_all(parent)?;
-                }
-                fs::write(&target, rendered.content)?;
-                println!("Wrote {}", target.display());
-            }
-            return Ok(());
+        if let Some(tree) = catalog.get_tree(id) {
+            return handle_tree(&renderer, tree, out_dir, print, &args_map);
         }
 
-        let mut all: Vec<String> = files.keys().cloned().collect();
-        all.extend(trees.keys().cloned());
-        all.sort();
+        let mut available: Vec<String> = catalog
+            .standalone_files()
+            .iter()
+            .map(|f| f.id.clone())
+            .collect();
+        for tree in catalog.tree_templates() {
+            available.push(tree.id().to_string());
+            available.extend(tree.files().iter().map(|f| f.id.clone()));
+        }
+        available.sort();
+        available.dedup();
+
         bail!(
             "Template id '{}' not found. Available: {}",
             id,
-            all.join(", ")
+            available.join(", ")
         )
     }
 }
 
-fn register_id(id: &str, location: &Location, seen: &mut HashMap<String, Location>) -> Result<()> {
-    if let Some(existing) = seen.get(id) {
-        let first = FormattedLocation(existing).to_string();
-        let duplicate = FormattedLocation(location).to_string();
-        return Err(anyhow!("Duplicate template id: {}", id))
-            .with_context(|| format!("duplicate occurrence at {duplicate}"))
-            .with_context(|| format!("first occurrence at {first}"));
+fn handle_file(
+    renderer: &TemplateRenderer,
+    file_ref: CatalogFileRef<'_>,
+    out_dir: Option<FsPathBuf>,
+    print: bool,
+    context: &JsonMap<String, JsonValue>,
+) -> Result<()> {
+    let template = match file_ref {
+        CatalogFileRef::Standalone(t) => t,
+        CatalogFileRef::TreeMember { file, .. } => file,
+    };
+
+    let rendered = render_template_file(renderer, template, context)?;
+
+    if print {
+        print!("{}", rendered.content);
+        io::stdout().flush()?;
+        return Ok(());
     }
 
-    seen.insert(id.to_string(), location.clone());
+    let root = out_dir.clone().ok_or_else(|| {
+        anyhow!(
+            "--print not set and no output path provided. Pass --out <path> or supply a positional path."
+        )
+    })?;
+
+    let rel = rendered.path.clone().ok_or_else(|| {
+        anyhow!(
+            "Template '{}' has no path; supply --print to inspect output or select a tree template.",
+            template.id
+        )
+    })?;
+    let target = root.join(rel);
+    if let Some(parent) = target.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&target, rendered.content)?;
+    println!("Wrote {}", target.display());
+    Ok(())
+}
+
+fn handle_tree(
+    renderer: &TemplateRenderer,
+    tree: &CatalogTree,
+    out_dir: Option<FsPathBuf>,
+    print: bool,
+    context: &JsonMap<String, JsonValue>,
+) -> Result<()> {
+    let rendered_files: Vec<OutputFile> = tree
+        .files()
+        .iter()
+        .map(|file| render_template_file(renderer, file, context))
+        .collect::<Result<_>>()?;
+
+    if print {
+        let out = OutputTree {
+            files: rendered_files.clone(),
+        };
+        println!("{}", serde_json::to_string_pretty(&out)?);
+        return Ok(());
+    }
+
+    let root = out_dir.clone().ok_or_else(|| {
+        anyhow!(
+            "--print not set and no output path provided. Pass --out <path> or supply a positional path."
+        )
+    })?;
+
+    if !root.exists() {
+        fs::create_dir_all(&root)?;
+    }
+    if !root.is_dir() {
+        bail!("Output path '{}' is not a directory.", root.display());
+    }
+
+    for rendered in rendered_files {
+        let rel = rendered.path.clone().ok_or_else(|| {
+            anyhow!(
+                "Tree '{}' produced a file without a path; supply --print to inspect output instead.",
+                tree.id()
+            )
+        })?;
+        let target = root.join(rel);
+        if let Some(parent) = target.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(&target, rendered.content)?;
+        println!("Wrote {}", target.display());
+    }
+
     Ok(())
 }
 
@@ -315,28 +269,6 @@ fn parse_value(raw: &str) -> JsonValue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use nmcr_types::Span;
-    fn make_loc(path: &str, start: usize, end: usize) -> Location {
-        Location {
-            path: path.to_string(),
-            span: Span { start, end },
-        }
-    }
-
-    #[test]
-    fn register_template_detects_duplicates() {
-        let mut seen = HashMap::new();
-        let first = make_loc("templates/a.md", 0, 10);
-        register_id("duplicate", &first, &mut seen).expect("first registration succeeds");
-
-        let second = make_loc("templates/b.md", 5, 15);
-        let err = register_id("duplicate", &second, &mut seen).expect_err("duplicate should fail");
-
-        let rendered = format!("{err:?}");
-        assert!(rendered.contains("Duplicate template id: duplicate"));
-        assert!(rendered.contains("duplicate occurrence at templates/b.md:5-15"));
-        assert!(rendered.contains("first occurrence at templates/a.md:0-10"));
-    }
 
     #[test]
     fn parse_arg_pair_supports_scalars() {

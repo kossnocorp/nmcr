@@ -4,6 +4,7 @@ members = [
   "pkgs/cli",
   "pkgs/mcp",
   "pkgs/md-parser",
+  "pkgs/catalog",
   "pkgs/id",
   "pkgs/project",
   "pkgs/types-internal",

@@ -1,31 +1,34 @@
 use super::render_template;
 use super::tool::{ensure_required_args, json_type};
 use crate::prelude::*;
+use nmcr_catalog::CatalogTree;
+use nmcr_types::{Arg, ArgKind};
 use std::collections::BTreeSet;
 
 #[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct TreeTool {
-    tree: TemplateTree,
+    tree: CatalogTree,
     tool_name: String,
+    #[allow(dead_code)]
     display_name: String,
     description: String,
     schema: Arc<JsonMap<String, JsonValue>>,
 }
 
 impl TreeTool {
-    pub(crate) fn from_tree(tree: TemplateTree) -> Self {
-        let tool_name = tree.id.clone();
-        let display_name = if tree.name.trim().is_empty() {
+    pub(crate) fn from_tree(tree: CatalogTree) -> Self {
+        let tool_name = tree.id().to_string();
+        let display_name = if tree.name().trim().is_empty() {
             format!("{} (tree)", tool_name)
         } else {
-            tree.name.trim().to_string()
+            tree.name().trim().to_string()
         };
 
-        let description = if tree.description.trim().is_empty() {
+        let description = if tree.description().trim().is_empty() {
             format!("Render the {} tree.", display_name)
         } else {
-            tree.description.trim().to_string()
+            tree.description().trim().to_string()
         };
 
         let schema = Arc::new(Self::args_schema(&tree));
@@ -55,27 +58,23 @@ impl TreeTool {
             Box::pin(async move {
                 let args = context.arguments.take().unwrap_or_default();
                 let mut files: Vec<nmcr_types::OutputFile> = Vec::new();
-                for t in &tree.files {
-                    if let Template::TemplateFile(f) = t {
-                        ensure_required_args(f, &args)
-                            .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
-                        let rendered = render_template(&f.id, &f.content, &args)
-                            .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
-                        let rendered_path = match &f.path {
-                            Some(path_tpl) => Some(
-                                render_template(&format!("{}::path", f.id), path_tpl, &args)
-                                    .map_err(|err| {
-                                        McpError::invalid_params(err.to_string(), None)
-                                    })?,
-                            ),
-                            None => None,
-                        };
-                        files.push(nmcr_types::OutputFile {
-                            path: rendered_path,
-                            lang: f.lang.clone(),
-                            content: rendered,
-                        });
-                    }
+                for file in tree.files() {
+                    ensure_required_args(file, &args)
+                        .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
+                    let rendered = render_template(&file.id, &file.content, &args)
+                        .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
+                    let rendered_path = match &file.path {
+                        Some(path_tpl) => Some(
+                            render_template(&format!("{}::path", file.id), path_tpl, &args)
+                                .map_err(|err| McpError::invalid_params(err.to_string(), None))?,
+                        ),
+                        None => None,
+                    };
+                    files.push(nmcr_types::OutputFile {
+                        path: rendered_path,
+                        lang: file.lang.clone(),
+                        content: rendered,
+                    });
                 }
                 let out = nmcr_types::OutputTree { files };
                 let output_schema = Self::output_schema(&tree);
@@ -92,41 +91,39 @@ impl TreeTool {
         format!("- {} → {} (tree)", self.tool_name, self.display_name)
     }
 
-    fn args_schema(tree: &TemplateTree) -> JsonMap<String, JsonValue> {
+    fn args_schema(tree: &CatalogTree) -> JsonMap<String, JsonValue> {
         // Union of args across files in the tree
         let mut schema = JsonMap::new();
         schema.insert("type".into(), JsonValue::String("object".into()));
 
         let mut properties = JsonMap::new();
         let mut required = BTreeSet::new();
-        for t in &tree.files {
-            if let Template::TemplateFile(f) = t {
-                for arg in &f.args {
-                    properties.entry(arg.name.clone()).or_insert_with(|| {
-                        let mut prop = JsonMap::new();
-                        match &arg.kind {
-                            ArgKind::Boolean(_) => {
-                                prop.insert("type".into(), JsonValue::String("boolean".into()));
-                            }
-                            ArgKind::String(_) => {
-                                prop.insert("type".into(), JsonValue::String("string".into()));
-                            }
-                            ArgKind::Number(_) => {
-                                prop.insert("type".into(), JsonValue::String("number".into()));
-                            }
-                            ArgKind::Any(_) => {}
+        for file in tree.files() {
+            for arg in &file.args {
+                properties.entry(arg.name.clone()).or_insert_with(|| {
+                    let mut prop = JsonMap::new();
+                    match &arg.kind {
+                        ArgKind::Boolean(_) => {
+                            prop.insert("type".into(), JsonValue::String("boolean".into()));
                         }
-                        if !arg.description.trim().is_empty() {
-                            prop.insert(
-                                "description".into(),
-                                JsonValue::String(arg.description.clone()),
-                            );
+                        ArgKind::String(_) => {
+                            prop.insert("type".into(), JsonValue::String("string".into()));
                         }
-                        JsonValue::Object(prop)
-                    });
-                    if arg.required {
-                        required.insert(arg.name.clone());
+                        ArgKind::Number(_) => {
+                            prop.insert("type".into(), JsonValue::String("number".into()));
+                        }
+                        ArgKind::Any(_) => {}
                     }
+                    if !arg.description.trim().is_empty() {
+                        prop.insert(
+                            "description".into(),
+                            JsonValue::String(arg.description.clone()),
+                        );
+                    }
+                    JsonValue::Object(prop)
+                });
+                if arg.required {
+                    required.insert(arg.name.clone());
                 }
             }
         }
@@ -139,12 +136,9 @@ impl TreeTool {
         schema
     }
 
-    fn output_schema(tree: &TemplateTree) -> JsonMap<String, JsonValue> {
+    fn output_schema(tree: &CatalogTree) -> JsonMap<String, JsonValue> {
         // Build item schema; require path only if every file has a path
-        let all_have_path = tree.files.iter().all(|t| match t {
-            Template::TemplateFile(f) => f.path.is_some(),
-            _ => true,
-        });
+        let all_have_path = tree.files().iter().all(|f| f.path.is_some());
         let mut item_props = JsonMap::new();
         item_props.insert("content".into(), json_type("string"));
         item_props.insert("lang".into(), json_type("string"));
@@ -173,7 +167,7 @@ impl TreeTool {
         );
         schema.insert(
             "title".into(),
-            JsonValue::String(format!("{}:OutputTree", tree.id)),
+            JsonValue::String(format!("{}:OutputTree", tree.id())),
         );
         schema.insert("type".into(), JsonValue::String("object".into()));
         schema.insert("properties".into(), JsonValue::Object(props));

@@ -22,6 +22,10 @@ idiomatic_version_file_enable_tools = [
 description = "Setup development environment"
 run = "./scripts/setup.sh"
 
+[tasks.lint]
+description = "Lint code style"
+run = "cargo clippy --all-features -- -D warnings"
+
 [tasks.fix]
 description = "Fix code style issues"
 run = "cargo clippy --fix --all-features --allow-dirty"

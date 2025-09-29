@@ -9,6 +9,9 @@ pub use r#gen::*;
 mod mcp;
 pub use mcp::*;
 
+mod list;
+pub use list::*;
+
 #[derive(Subcommand)]
 pub enum Command {
     /// Initialize a new nmcr project in an existing directory
@@ -19,6 +22,9 @@ pub enum Command {
 
     /// Start the MCP server exposing project templates as tools.
     Mcp(CliCommandProject<McpArgs>),
+
+    /// List available templates grouped by tree membership.
+    List(CliCommandProject<ListArgs>),
 }
 
 impl Command {
@@ -29,6 +35,8 @@ impl Command {
             Some(Command::Gen(args)) => Ok(GenCmd::run(args).await?),
 
             Some(Command::Mcp(args)) => Ok(McpCmd::run(args).await?),
+
+            Some(Command::List(args)) => Ok(ListCmd::run(args).await?),
 
             None => unreachable!("No command was provided"),
         }
