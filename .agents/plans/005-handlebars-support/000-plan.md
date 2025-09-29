@@ -45,6 +45,10 @@ Generation must fail fast with a clear "missing arguments" error when any Handle
 - Audit existing template metadata loaders to ensure variable descriptions defined in Markdown stay authoritative when merging detected variables.
 - Confirm tree templates still render correctly when their file paths include Handlebars expressions and that directory creation respects interpolated segments.
 
+## Follow-Ups
+
+- 2025-09-28 — Implemented a post-plan update to broaden argument documentation syntax (supporting both “Args”/“Arguments” headings, optional `[type]` annotations, and inline descriptions) and to rename the CLI flag to `--out` while making `--print` emit raw content for `nmcr gen … > file` workflows.
+
 ## Prompt
 
 I want you to plan a handlebars support feature. Use 005 index, as we're working on something else in parallel.

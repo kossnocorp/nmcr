@@ -1,5 +1,7 @@
 use indoc::indoc;
+use nmcr_md_parser::ParsedMarkdown;
 use nmcr_md_parser::markdown::parse_str;
+use nmcr_types::{ArgKind, Template};
 
 #[test]
 fn tree_detection() {
@@ -228,6 +230,7 @@ fn single_details() {
                         kind: Any(
                             "any",
                         ),
+                        required: true,
                     },
                 ],
                 lang: Some(
@@ -246,6 +249,45 @@ fn single_details() {
         ),
     )
     "#);
+}
+
+#[test]
+fn argument_types_and_descriptions() {
+    let input = indoc! {r#"
+        # Component
+
+        ## Arguments
+
+        - `name` [string]: Display name.
+        - `includeProps?` [boolean]
+
+        ## Template
+
+        ```handlebars
+        export const Component = () => "hello";
+        ```
+    "#};
+
+    let parsed = parse_str(Some("component"), input).expect("parse markdown");
+
+    let file = match parsed {
+        ParsedMarkdown::Template(Template::TemplateFile(file)) => file,
+        other => panic!("unexpected parser result: {other:?}"),
+    };
+
+    assert_eq!(file.args.len(), 2, "expected two arguments");
+
+    let first = &file.args[0];
+    assert_eq!(first.name, "name");
+    assert_eq!(first.description, "Display name.");
+    assert!(matches!(first.kind, ArgKind::String(_)));
+    assert!(first.required);
+
+    let second = &file.args[1];
+    assert_eq!(second.name, "includeProps");
+    assert!(second.description.is_empty());
+    assert!(matches!(second.kind, ArgKind::Boolean(_)));
+    assert!(!second.required);
 }
 
 #[test]
@@ -297,6 +339,7 @@ fn collection() {
                         kind: Any(
                             "any",
                         ),
+                        required: true,
                     },
                 ],
                 lang: Some(

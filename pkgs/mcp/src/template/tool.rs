@@ -1,6 +1,8 @@
 use super::render_template;
 use crate::prelude::*;
+use anyhow::bail;
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct TemplateTool {
     template: TemplateFile,
@@ -52,9 +54,19 @@ impl TemplateTool {
             let template = template.clone();
             Box::pin(async move {
                 let arguments = context.arguments.take().unwrap_or_default();
-                let rendered = render_template(&template.content, &arguments);
+                ensure_required_args(&template, &arguments)
+                    .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
+                let rendered = render_template(&template.id, &template.content, &arguments)
+                    .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
+                let rendered_path = match &template.path {
+                    Some(path_tpl) => Some(
+                        render_template(&format!("{}::path", template.id), path_tpl, &arguments)
+                            .map_err(|err| McpError::invalid_params(err.to_string(), None))?,
+                    ),
+                    None => None,
+                };
                 let out = nmcr_types::OutputFile {
-                    path: template.path.clone(),
+                    path: rendered_path,
                     lang: template.lang.clone(),
                     content: rendered,
                 };
@@ -67,17 +79,24 @@ impl TemplateTool {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn instructions_line(&self) -> String {
         let mut line = format!("- {} → {}", self.tool_name, self.display_name);
         if !self.template.description.trim().is_empty() {
             line.push_str(&format!(" — {}", self.template.description.trim()));
         }
         if !self.template.args.is_empty() {
-            let arg_names: Vec<_> = self
+            let arg_names: Vec<String> = self
                 .template
                 .args
                 .iter()
-                .map(|arg| arg.name.as_str())
+                .map(|arg| {
+                    if arg.required {
+                        arg.name.clone()
+                    } else {
+                        format!("{}?", arg.name)
+                    }
+                })
                 .collect();
             line.push_str(&format!(" (args: {})", arg_names.join(", ")));
         }
@@ -89,6 +108,7 @@ impl TemplateTool {
         schema.insert("type".into(), JsonValue::String("object".into()));
 
         let mut properties = JsonMap::new();
+        let mut required = Vec::new();
         for arg in args {
             let mut prop = JsonMap::new();
             match &arg.kind {
@@ -112,10 +132,16 @@ impl TemplateTool {
             }
 
             properties.insert(arg.name.clone(), JsonValue::Object(prop));
+            if arg.required {
+                required.push(JsonValue::String(arg.name.clone()));
+            }
         }
 
         schema.insert("properties".into(), JsonValue::Object(properties));
         schema.insert("additionalProperties".into(), JsonValue::Bool(false));
+        if !required.is_empty() {
+            schema.insert("required".into(), JsonValue::Array(required));
+        }
         schema
     }
 
@@ -128,8 +154,14 @@ impl TemplateTool {
         }
 
         let mut obj = JsonMap::new();
-        obj.insert("$schema".into(), JsonValue::String("https://json-schema.org/draft/2020-12/schema".into()));
-        obj.insert("title".into(), JsonValue::String(format!("{}:OutputFile", t.id)));
+        obj.insert(
+            "$schema".into(),
+            JsonValue::String("https://json-schema.org/draft/2020-12/schema".into()),
+        );
+        obj.insert(
+            "title".into(),
+            JsonValue::String(format!("{}:OutputFile", t.id)),
+        );
         obj.insert("type".into(), JsonValue::String("object".into()));
         obj.insert("properties".into(), JsonValue::Object(properties));
 
@@ -140,6 +172,28 @@ impl TemplateTool {
         }
         obj.insert("required".into(), JsonValue::Array(required));
         obj
+    }
+}
+
+pub(super) fn ensure_required_args(
+    template: &TemplateFile,
+    args: &JsonMap<String, JsonValue>,
+) -> Result<()> {
+    let missing: Vec<String> = template
+        .args
+        .iter()
+        .filter(|arg| arg.required && !args.contains_key(&arg.name))
+        .map(|arg| arg.name.clone())
+        .collect();
+
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        bail!(
+            "Missing required argument(s) {} for template '{}'.",
+            missing.join(", "),
+            template.id
+        )
     }
 }
 
@@ -160,6 +214,7 @@ mod tests {
             name: name.to_string(),
             description: description.to_string(),
             kind,
+            required: true,
         }
     }
 
@@ -221,5 +276,39 @@ mod tests {
 
         let tool = TemplateTool::from_template(template.clone());
         assert_eq!(tool.tool_name, template.id);
+    }
+
+    #[test]
+    fn optional_args_marked_in_instructions() {
+        let args = vec![
+            Arg {
+                name: "name".into(),
+                description: String::new(),
+                kind: ArgKind::String(ArgKindString),
+                required: true,
+            },
+            Arg {
+                name: "suffix".into(),
+                description: String::new(),
+                kind: ArgKind::String(ArgKindString),
+                required: false,
+            },
+        ];
+
+        let template = TemplateFile {
+            kind: nmcr_types::TemplateFileKindFile,
+            id: "example".into(),
+            name: "Example".into(),
+            description: String::new(),
+            args,
+            lang: None,
+            content: String::new(),
+            path: None,
+            location: empty_location(),
+        };
+
+        let tool = TemplateTool::from_template(template);
+        let instructions = tool.instructions_line();
+        assert!(instructions.contains("suffix?"));
     }
 }

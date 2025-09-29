@@ -1,6 +1,9 @@
 use crate::prelude::*;
 use nmcr_id::EntityId;
+use nmcr_template::discover_placeholders;
+use nmcr_types_internal::FormattedLocation;
 use relative_path::RelativePathBuf;
+use std::collections::{BTreeMap, BTreeSet};
 
 #[derive(Clone, Debug)]
 struct Section {
@@ -100,6 +103,7 @@ fn parse_str_with_path(
                             };
                             // Attempt inline path capture
                             t.path = extract_inline_path_before_code(&child.nodes);
+                            enrich_template_args(&mut t)?;
                             child_templates.push(t);
                         }
                     }
@@ -193,6 +197,7 @@ fn parse_str_with_path(
                 };
                 tmpl.path = extract_inline_path_before_code(&sec.nodes)
                     .or_else(|| extract_inline_path_from_heading(sec));
+                enrich_template_args(&mut tmpl)?;
                 // Parent path (all but last segment)
                 let parent_path = if sec.path.len() > 1 {
                     sec.path[..(sec.path.len() - 1)].to_vec()
@@ -224,26 +229,28 @@ fn parse_str_with_path(
                 |p: &Vec<String>| -> Option<&Section> { sections.iter().find(|s| &s.path == p) };
 
             for (parent_path, files) in groups.into_iter() {
-                if !files.is_empty() && files.iter().all(|t| t.path.is_some())
-                    && let Some(parent_sec) = find_section(&parent_path) {
-                        let id = EntityId::new()
-                            .from_segments(parent_sec.path.iter().map(|s| s.as_str()));
-                        if !id.is_empty() {
-                            let tree = TemplateTree {
-                                kind: TemplateTreeKindTree,
-                                id,
-                                name: parent_sec.title.clone(),
-                                description: collect_tree_description(parent_sec),
-                                files: files
-                                    .clone()
-                                    .into_iter()
-                                    .map(Template::TemplateFile)
-                                    .collect(),
-                                location: section_location(parent_sec, path),
-                            };
-                            trees.push(tree);
-                        }
+                if !files.is_empty()
+                    && files.iter().all(|t| t.path.is_some())
+                    && let Some(parent_sec) = find_section(&parent_path)
+                {
+                    let id =
+                        EntityId::new().from_segments(parent_sec.path.iter().map(|s| s.as_str()));
+                    if !id.is_empty() {
+                        let tree = TemplateTree {
+                            kind: TemplateTreeKindTree,
+                            id,
+                            name: parent_sec.title.clone(),
+                            description: collect_tree_description(parent_sec),
+                            files: files
+                                .clone()
+                                .into_iter()
+                                .map(Template::TemplateFile)
+                                .collect(),
+                            location: section_location(parent_sec, path),
+                        };
+                        trees.push(tree);
                     }
+                }
                 templates.extend(files.into_iter().map(Template::TemplateFile));
             }
 
@@ -316,7 +323,7 @@ fn section_contains_allowed(section: &Section) -> bool {
 }
 
 fn is_allowed(title: &str) -> bool {
-    let t = title.trim().to_lowercase();
+    let t = normalize_heading(title);
     ALLOWED_SUBHEADS.contains(&t.as_str())
 }
 
@@ -383,12 +390,18 @@ fn parse_template_from_section(
         return Ok(None);
     }
 
+    enrich_template_args(&mut tmpl)?;
+
     Ok(Some(tmpl))
 }
 
 fn matches_subhead(title: &str, names: &[&str]) -> bool {
-    let t = title.trim().to_lowercase();
+    let t = normalize_heading(title);
     names.contains(&t.as_str())
+}
+
+fn normalize_heading(title: &str) -> String {
+    title.trim().trim_end_matches(':').trim().to_lowercase()
 }
 
 fn collect_description(section: &Section) -> String {
@@ -487,23 +500,15 @@ fn parse_args(section: &Section) -> Vec<Arg> {
             mdast::Node::List(list) => {
                 for item in &list.children {
                     if let mdast::Node::ListItem(li) = item
-                        && let Some((name, desc)) = parse_arg_item(li)
+                        && let Some(arg) = parse_arg_item(li)
                     {
-                        args.push(Arg {
-                            name,
-                            description: desc,
-                            kind: ArgKind::Any(ArgKindAny),
-                        });
+                        args.push(arg);
                     }
                 }
             }
             mdast::Node::ListItem(item) => {
-                if let Some((name, desc)) = parse_arg_item(item) {
-                    args.push(Arg {
-                        name,
-                        description: desc,
-                        kind: ArgKind::Any(ArgKindAny),
-                    });
+                if let Some(arg) = parse_arg_item(item) {
+                    args.push(arg);
                 }
             }
             _ => {}
@@ -512,12 +517,10 @@ fn parse_args(section: &Section) -> Vec<Arg> {
     args
 }
 
-fn parse_arg_item(item: &mdast::ListItem) -> Option<(String, String)> {
-    // Strategy: find first inline code as name, then collect text AFTER it.
-    // On the very first text fragment after the name, strip leading separators like ':' or '-'.
+fn parse_arg_item(item: &mdast::ListItem) -> Option<Arg> {
+    // Strategy: capture the first inline code as the name, then parse optional type and description.
     let mut name: Option<String> = None;
-    let mut desc = String::new();
-    let mut started_desc = false;
+    let mut tail = String::new();
 
     for node in &item.children {
         if let mdast::Node::Paragraph(p) = node {
@@ -526,56 +529,81 @@ fn parse_arg_item(item: &mdast::ListItem) -> Option<(String, String)> {
                     mdast::Node::InlineCode(ic) if name.is_none() => {
                         name = Some(ic.value.clone());
                     }
-                    _ if name.is_none() => {
-                        // Ignore any content before the first inline code (name)
-                    }
-                    mdast::Node::Text(t) => {
-                        let mut s = t.value.as_str();
-                        if !started_desc {
-                            // Trim leading whitespace and common separators once
-                            s = s.trim_start();
-                            s = s.trim_start_matches([':', '-', '–', '—']);
-                            s = s.trim_start();
-                            started_desc = true;
-                        }
-                        if !s.is_empty() {
-                            if !desc.is_empty() && !desc.ends_with(' ') {
-                                desc.push(' ');
-                            }
-                            desc.push_str(s);
-                        }
-                    }
-                    other => {
-                        let s = inline_text(std::slice::from_ref(other));
-                        if !s.is_empty() {
-                            if !desc.is_empty()
-                                && !desc.ends_with(' ')
-                                && !s.starts_with(char::is_whitespace)
-                            {
-                                desc.push(' ');
-                            }
-                            if !started_desc && !s.is_empty() {
-                                // First fragment: strip leading separators if it starts with them
-                                let trimmed = s
-                                    .trim_start()
-                                    .trim_start_matches([':', '-', '–', '—'])
-                                    .trim_start()
-                                    .to_string();
-                                desc.push_str(&trimmed);
-                                started_desc = true;
-                            } else {
-                                desc.push_str(&s);
-                            }
-                        }
-                    }
+                    _ if name.is_none() => {}
+                    other => tail.push_str(&inline_text(std::slice::from_ref(other))),
                 }
             }
         }
     }
 
-    let name = name?;
-    let desc = desc.trim().to_string();
-    Some((name, desc))
+    let original = name?;
+    let trimmed = original.trim();
+    let stripped = trimmed.trim_end_matches('?');
+    let required = stripped.len() == trimmed.len();
+    let final_name = stripped.trim();
+    if final_name.is_empty() {
+        return None;
+    }
+
+    let mut remainder = tail.trim_start().to_string();
+    let kind = extract_kind(&mut remainder);
+    let description = normalize_description(&remainder);
+
+    Some(Arg {
+        name: final_name.to_string(),
+        description,
+        kind,
+        required,
+    })
+}
+
+fn extract_kind(remainder: &mut String) -> ArgKind {
+    if remainder.starts_with('[') {
+        if let Some(end) = remainder.find(']') {
+            let kind_text = remainder[1..end].trim().to_string();
+            remainder.drain(..=end);
+            return match kind_text.to_ascii_lowercase().as_str() {
+                "boolean" => ArgKind::Boolean(ArgKindBoolean),
+                "string" => ArgKind::String(ArgKindString),
+                "number" => ArgKind::Number(ArgKindNumber),
+                "any" => ArgKind::Any(ArgKindAny),
+                _ => ArgKind::Any(ArgKindAny),
+            };
+        }
+    }
+
+    ArgKind::Any(ArgKindAny)
+}
+
+fn normalize_description(input: &str) -> String {
+    let trimmed = input.trim_start();
+    let stripped = trimmed
+        .trim_start_matches([':', '-', '–', '—'])
+        .trim_start();
+    stripped.trim().to_string()
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq, PartialOrd, Ord)]
+enum PlaceholderSource {
+    Content,
+    Path,
+}
+
+impl PlaceholderSource {
+    fn label(self) -> &'static str {
+        match self {
+            PlaceholderSource::Content => "content",
+            PlaceholderSource::Path => "path",
+        }
+    }
+}
+
+fn describe_sources(sources: &BTreeSet<PlaceholderSource>) -> String {
+    match sources.len() {
+        0 => String::new(),
+        1 => format!("in {}", sources.iter().next().unwrap().label()),
+        _ => "in content and path".to_string(),
+    }
 }
 
 fn position_to_span(position: &markdown::unist::Position) -> Span {
@@ -654,4 +682,76 @@ fn inline_text(nodes: &[mdast::Node]) -> String {
         }
     }
     out
+}
+
+fn enrich_template_args(template: &mut TemplateFile) -> Result<()> {
+    let mut discovered: BTreeMap<String, BTreeSet<PlaceholderSource>> = BTreeMap::new();
+
+    for placeholder in discover_placeholders(&template.content) {
+        discovered
+            .entry(placeholder.name)
+            .or_default()
+            .insert(PlaceholderSource::Content);
+    }
+
+    if let Some(path_tpl) = &template.path {
+        for placeholder in discover_placeholders(path_tpl) {
+            discovered
+                .entry(placeholder.name)
+                .or_default()
+                .insert(PlaceholderSource::Path);
+        }
+    }
+
+    if discovered.is_empty() {
+        return Ok(());
+    }
+
+    let manual_args = template.args.clone();
+    let mut manual_lookup: BTreeMap<String, Arg> = BTreeMap::new();
+    for arg in &manual_args {
+        manual_lookup.insert(arg.name.clone(), arg.clone());
+    }
+
+    for (name, sources) in &discovered {
+        if let Some(arg) = manual_lookup.get(name) {
+            if !arg.required {
+                let location = FormattedLocation(&template.location);
+                let where_str = describe_sources(sources);
+                let detail = if where_str.is_empty() {
+                    String::new()
+                } else {
+                    format!(" {}", where_str)
+                };
+                bail!(
+                    "Argument '{}' is documented as optional but used{} for template '{}' at {}.",
+                    name,
+                    detail,
+                    template.id,
+                    location
+                );
+            }
+        }
+    }
+
+    let mut final_args = Vec::new();
+    let mut seen = BTreeSet::new();
+    for arg in manual_args {
+        seen.insert(arg.name.clone());
+        final_args.push(arg);
+    }
+
+    for name in discovered.keys() {
+        if seen.insert(name.clone()) {
+            final_args.push(Arg {
+                name: name.clone(),
+                description: String::new(),
+                kind: ArgKind::Any(ArgKindAny),
+                required: true,
+            });
+        }
+    }
+
+    template.args = final_args;
+    Ok(())
 }

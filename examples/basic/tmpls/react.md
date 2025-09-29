@@ -8,8 +8,8 @@ React component file template with optional props.
 
 ### Args
 
-- `props`: Whether to include props interface.
-- `name`: Component name.
+- `props?` [boolean]: Include a props interface scaffold.
+- `name` [string]: Component name.
 
 ### Template
 

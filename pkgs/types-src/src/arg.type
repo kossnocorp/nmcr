@@ -2,6 +2,7 @@ Arg = {
   name: string,
   description: string,
   kind: ArgKind,
+  required: bool,
 }
 
 ArgKind = "any" | "boolean" | "string" | "number"

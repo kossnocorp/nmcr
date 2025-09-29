@@ -24,6 +24,8 @@ Arg = {
   /// Human-readable help text.
   description: string,
   kind: ArgKind,
+  /// Whether the template requires this argument at render time.
+  required: bool,
 }
 ```
 
@@ -38,6 +40,8 @@ pub struct Arg {
     /// Human-readable help text.
     pub description: String,
     pub kind: ArgKind,
+    /// Whether the template requires this argument at render time.
+    pub required: bool,
 }
 ```
 

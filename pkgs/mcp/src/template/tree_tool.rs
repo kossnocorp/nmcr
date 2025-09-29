@@ -1,7 +1,9 @@
 use super::render_template;
-use super::tool::json_type;
+use super::tool::{ensure_required_args, json_type};
 use crate::prelude::*;
+use std::collections::BTreeSet;
 
+#[allow(dead_code)]
 #[derive(Clone)]
 pub(crate) struct TreeTool {
     tree: TemplateTree,
@@ -55,9 +57,21 @@ impl TreeTool {
                 let mut files: Vec<nmcr_types::OutputFile> = Vec::new();
                 for t in &tree.files {
                     if let Template::TemplateFile(f) = t {
-                        let rendered = render_template(&f.content, &args);
+                        ensure_required_args(f, &args)
+                            .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
+                        let rendered = render_template(&f.id, &f.content, &args)
+                            .map_err(|err| McpError::invalid_params(err.to_string(), None))?;
+                        let rendered_path = match &f.path {
+                            Some(path_tpl) => Some(
+                                render_template(&format!("{}::path", f.id), path_tpl, &args)
+                                    .map_err(|err| {
+                                        McpError::invalid_params(err.to_string(), None)
+                                    })?,
+                            ),
+                            None => None,
+                        };
                         files.push(nmcr_types::OutputFile {
-                            path: f.path.clone(),
+                            path: rendered_path,
                             lang: f.lang.clone(),
                             content: rendered,
                         });
@@ -73,6 +87,7 @@ impl TreeTool {
         })
     }
 
+    #[allow(dead_code)]
     pub(crate) fn instructions_line(&self) -> String {
         format!("- {} → {} (tree)", self.tool_name, self.display_name)
     }
@@ -83,36 +98,44 @@ impl TreeTool {
         schema.insert("type".into(), JsonValue::String("object".into()));
 
         let mut properties = JsonMap::new();
+        let mut required = BTreeSet::new();
         for t in &tree.files {
             if let Template::TemplateFile(f) = t {
                 for arg in &f.args {
-                    let mut prop = JsonMap::new();
-                    match &arg.kind {
-                        ArgKind::Boolean(_) => {
-                            prop.insert("type".into(), JsonValue::String("boolean".into()));
+                    properties.entry(arg.name.clone()).or_insert_with(|| {
+                        let mut prop = JsonMap::new();
+                        match &arg.kind {
+                            ArgKind::Boolean(_) => {
+                                prop.insert("type".into(), JsonValue::String("boolean".into()));
+                            }
+                            ArgKind::String(_) => {
+                                prop.insert("type".into(), JsonValue::String("string".into()));
+                            }
+                            ArgKind::Number(_) => {
+                                prop.insert("type".into(), JsonValue::String("number".into()));
+                            }
+                            ArgKind::Any(_) => {}
                         }
-                        ArgKind::String(_) => {
-                            prop.insert("type".into(), JsonValue::String("string".into()));
+                        if !arg.description.trim().is_empty() {
+                            prop.insert(
+                                "description".into(),
+                                JsonValue::String(arg.description.clone()),
+                            );
                         }
-                        ArgKind::Number(_) => {
-                            prop.insert("type".into(), JsonValue::String("number".into()));
-                        }
-                        ArgKind::Any(_) => {}
+                        JsonValue::Object(prop)
+                    });
+                    if arg.required {
+                        required.insert(arg.name.clone());
                     }
-                    if !arg.description.trim().is_empty() {
-                        prop.insert(
-                            "description".into(),
-                            JsonValue::String(arg.description.clone()),
-                        );
-                    }
-                    properties
-                        .entry(arg.name.clone())
-                        .or_insert(JsonValue::Object(prop));
                 }
             }
         }
         schema.insert("properties".into(), JsonValue::Object(properties));
         schema.insert("additionalProperties".into(), JsonValue::Bool(false));
+        if !required.is_empty() {
+            let req_values = required.into_iter().map(JsonValue::String).collect();
+            schema.insert("required".into(), JsonValue::Array(req_values));
+        }
         schema
     }
 

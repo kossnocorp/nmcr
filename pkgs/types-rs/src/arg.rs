@@ -1,11 +1,17 @@
-use serde::{Deserialize, Serialize};
 use litty::literal;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Arg {
     pub name: String,
     pub description: String,
     pub kind: ArgKind,
+    #[serde(default = "default_required")]
+    pub required: bool,
+}
+
+fn default_required() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

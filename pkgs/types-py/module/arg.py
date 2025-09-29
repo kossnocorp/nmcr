@@ -9,3 +9,4 @@ class Arg(Model):
     name: str
     description: str
     kind: ArgKind
+    required: bool

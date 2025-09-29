@@ -1,4 +1,4 @@
-use super::{tool::TemplateTool, TreeTool};
+use super::{TreeTool, tool::TemplateTool};
 use crate::prelude::*;
 
 mod context;
@@ -64,7 +64,10 @@ impl TemplateCatalog {
             }
         }
 
-        Ok(Self { file_tools, tree_tools })
+        Ok(Self {
+            file_tools,
+            tree_tools,
+        })
     }
 
     pub(crate) fn is_empty(&self) -> bool {
