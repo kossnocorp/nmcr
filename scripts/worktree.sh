@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+# This script provides git worktree management flow.
+
 set -eo pipefail
 
 # Make sure mise is activated
