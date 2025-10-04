@@ -2,15 +2,7 @@
 
 # This script provides git worktree management flow.
 
-set -eo pipefail
-
-# Make sure mise is activated
-eval "$(mise activate bash --shims)"
-eval "$(mise env -s bash)"
-
-script_path="$0"
-root_dir="$(dirname "$script_path")/.."
-root_repo_dir="$(git rev-parse --show-toplevel)"
+source "$(dirname "$0")/_env.sh"
 
 set_worktree_vars() {
   cmd="$1"
@@ -20,7 +12,7 @@ set_worktree_vars() {
     exit 1
   fi
   worktree_dir="$root_repo_dir/trees/$worktree_name"
-  worktree_branch="tree/$worktree_name"
+  worktree_branch="worktree/$worktree_name"
   worktree_git_dir="$root_repo_dir/.git/worktrees/$worktree_name"
 
   echo "🔵 Worktree '$worktree_name' at '$worktree_dir' on branch '$worktree_branch'"
@@ -46,6 +38,8 @@ get_worktree_dir() {
 new() {
   echo -e "⚡️ Creating worktree\n"
 
+  ensure_code_workspace
+
   set_worktree_vars new "$1"
 
   echo -e "🌀 Creating the worktree"
@@ -57,22 +51,26 @@ new() {
     exit 1
   fi
 
-  if ! err=$(git worktree add -b "$worktree_branch" "$worktree_dir" origin/main 2>&1); then
+  if ! err=$(git worktree add -b "$worktree_branch" "$worktree_dir" 2>&1); then
     echo -e "\n🔴 Failed to create worktree at '$worktree_dir':\n\n$err"
     exit 1
   fi
 
   cd_worktree
 
-  if ! err=$(mise trust --yes --all > /dev/null 2>&1); then
-    echo -e "\n🔴 Failed to trust mise configs:\n\n$err"
-    exit 1
-  fi
+  echo -e "🌀 Setting up environment"
+  ./.devcontainer/scripts/on-update.sh
 
-  if ! err=$(mise install > /dev/null 2>&1); then
-    echo -e "\n🔴 Failed to install mise dependencies:\n\n$err"
-    exit 1
-  fi
+  echo -e "🌀 Copying secrets"
+  secrets=(
+    ".env.local"
+    "pkgs/gateway/.env.local"
+  )
+  for secret in "$secrets"; do
+    cp -r "$root_repo_dir/$secret" "$worktree_dir/$secret"
+  done
+
+  add_worktree_to_workspace "$worktree_name"
 
   echo -e "\n💚 Worktree created!"
 
@@ -82,9 +80,16 @@ new() {
 drop() {
   echo -e "⚡️ Removing worktree\n"
 
+  ensure_code_workspace
+
   set_worktree_vars rm "$1"
 
-  echo -e "🌀 Removing the worktree"
+  echo -e "🌀 Removing the worktree from VS Code workspace $vsc_workspace_path"
+  echo -e "$(cat "$vsc_workspace_path" | jaq '
+    .folders |= map(select(.name != "'"$wrkspc_name"'/'"$worktree_name"'"))
+  ')" > "$vsc_workspace_path"
+
+  echo -e "🌀 Removing the worktree from Git"
 
   if [ ! -d "$worktree_git_dir" ]; then
     echo -e "\n🔴 Worktree for feature '$worktree_name' does not exist."
@@ -105,6 +110,12 @@ drop() {
     esac
   fi
 
+  # Check if the worktree branch has been merged into main
+
+  # First, fetch the latest main branch
+  git fetch origin main
+
+  # Then check if the worktree branch is an ancestor of main
   if ! git merge-base --is-ancestor "$worktree_branch" origin/main; then
     echo -e "🟠 Worktree branch '$worktree_branch' has not been merged or rebased into 'main'."
     read -r -p "❔️ Are you sure you want to continue? This may discard unmerged commits. [Y/n] " yn
@@ -119,18 +130,18 @@ drop() {
 
   cd_root
 
-  if ! err=$(git worktree remove "$worktree_dir" --force > /dev/null 2>&1); then
+  if ! err=$(git worktree remove "$worktree_dir" --force 2>&1 > /dev/null); then
     echo -e "\n🔴 Failed to remove worktree at '$worktree_dir':\n\n$err"
     exit 1
   fi
 
-  if ! err=$(git worktree prune > /dev/null 2>&1); then
+  if ! err=$(git worktree prune 2>&1 > /dev/null); then
     echo -e "\n🔴 Failed to prune worktrees:\n\n$err"
     exit 1
   fi
 
   echo -e "🌀 Removing the worktree branch"
-  if ! err=$(git branch -D "$worktree_branch" > /dev/null 2>&1); then
+  if ! err=$(git branch -D "$worktree_branch" 2>&1 > /dev/null); then
     echo -e "\n🔴 Failed to delete branch '$worktree_branch':\n\n$err"
     exit 1
   fi
